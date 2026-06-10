@@ -1,0 +1,15 @@
+# Segreti e configurazione locale
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.sqlite3
+backend/staticfiles/
+
+# Node
+node_modules/
+dist/
+
+# Sistema
+.DS_Store
