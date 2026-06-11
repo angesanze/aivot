@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <defs>
+    <linearGradient id="badge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#0d9488"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="-0.1" r="0.9">
+      <stop offset="0" stop-color="#10b981" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#10b981" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="640" fill="#0f172a"/>
+  <rect width="1280" height="640" fill="url(#glow)"/>
+
+  <!-- logo: grafo-A -->
+  <g transform="translate(508,96) scale(1.05)">
+    <rect width="256" height="256" rx="56" fill="url(#badge)"/>
+    <g stroke="#ffffff" stroke-width="16" stroke-linecap="round" fill="none">
+      <path d="M128 64 76 196"/><path d="M128 64 180 196"/><path d="M97 143h62"/>
+    </g>
+    <g fill="#ffffff">
+      <circle cx="76" cy="196" r="14"/><circle cx="180" cy="196" r="14"/>
+      <circle cx="97" cy="143" r="11"/><circle cx="159" cy="143" r="11"/>
+    </g>
+    <circle cx="128" cy="64" r="19" fill="#ffffff"/>
+    <circle cx="128" cy="64" r="12" fill="#fbbf24"/>
+  </g>
+
+  <text x="640" y="465" text-anchor="middle" fill="#ffffff"
+        font-family="Georgia, 'DejaVu Serif', serif" font-size="64"
+        letter-spacing="14">AIVOT</text>
+  <text x="640" y="525" text-anchor="middle" fill="#94a3b8"
+        font-family="'DejaVu Sans', sans-serif" font-size="26">Every constraint, a solution.</text>
+  <text x="640" y="585" text-anchor="middle" fill="#475569"
+        font-family="'DejaVu Sans', sans-serif" font-size="19">CP-SAT scheduling · explained outcomes · Django + React + OR-Tools</text>
+</svg>
