@@ -1,6 +1,10 @@
-# AIVOT
+<p align="center">
+  <img src="frontend/public/logo.svg" width="110" alt="AIVOT logo" />
+</p>
 
-**Every constraint, a solution.**
+<h1 align="center">AIVOT</h1>
+
+<p align="center"><b>Every constraint, a solution.</b></p>
 
 Constraint-based planning platform: describe people, shifts and rules —
 the CP-SAT engine (Google OR-Tools) computes the best possible schedule
