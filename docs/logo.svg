@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- AIVOT — la "A" come grafo di vincoli: nodi e archi,
+       il nodo al vertice è la soluzione. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#0d9488"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+
+  <!-- archi del grafo (gambe e traversa della A) -->
+  <g stroke="#ffffff" stroke-width="16" stroke-linecap="round" fill="none">
+    <path d="M128 64 76 196"/>
+    <path d="M128 64 180 196"/>
+    <path d="M97 143h62"/>
+  </g>
+
+  <!-- nodi -->
+  <g fill="#ffffff">
+    <circle cx="76"  cy="196" r="14"/>
+    <circle cx="180" cy="196" r="14"/>
+    <circle cx="97"  cy="143" r="11"/>
+    <circle cx="159" cy="143" r="11"/>
+  </g>
+
+  <!-- il nodo-soluzione: acceso -->
+  <circle cx="128" cy="64" r="19" fill="#ffffff"/>
+  <circle cx="128" cy="64" r="12" fill="#fbbf24"/>
+</svg>

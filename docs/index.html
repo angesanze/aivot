@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AIVOT · Every constraint, a solution</title>
+  <meta name="description" content="Constraint-based planning platform: describe people, shifts and rules — the CP-SAT engine computes the best schedule and explains why." />
+  <link rel="icon" type="image/svg+xml" href="logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prata&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0f172a;        /* slate-900 */
+      --paper: #f4f5f7;
+      --text: #111827;
+      --muted: #6b7280;
+      --line: #e3e6eb;
+      --em: #059669;         /* emerald-600 */
+      --em-light: #34d399;
+      --teal: #0d9488;
+      --amber: #fbbf24;
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      color: var(--text);
+      background: var(--paper);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+    .brand { font-family: Prata, Georgia, serif; letter-spacing: .14em; }
+    .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+    a { color: var(--em); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+
+    /* ---------- hero ---------- */
+    header {
+      background: var(--ink);
+      background-image: radial-gradient(ellipse 80% 60% at 50% -10%,
+        rgba(16, 185, 129, .22), transparent 65%);
+      color: #fff;
+      text-align: center;
+      padding: 88px 24px 96px;
+    }
+    header img.logo { width: 96px; height: 96px; border-radius: 22px;
+      box-shadow: 0 18px 50px rgba(16, 185, 129, .35); }
+    header h1 { font-size: 44px; margin: 26px 0 6px; font-weight: 400; }
+    header .tagline { color: #94a3b8; font-size: 19px; }
+    .cta { margin-top: 38px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-block; padding: 13px 26px; border-radius: 13px;
+      font-weight: 600; font-size: 15px; transition: transform .15s, box-shadow .15s;
+    }
+    .btn:hover { text-decoration: none; transform: translateY(-1px); }
+    .btn-primary {
+      background: linear-gradient(90deg, var(--em), #14b8a6); color: #fff;
+      box-shadow: 0 10px 30px rgba(5, 150, 105, .35);
+    }
+    .btn-ghost { color: #cbd5e1; border: 1px solid #334155; }
+    .btn-ghost:hover { color: #fff; border-color: #64748b; }
+    nav.toc {
+      margin-top: 54px; display: flex; gap: 26px; justify-content: center;
+      flex-wrap: wrap; font-size: 14px;
+    }
+    nav.toc a { color: #94a3b8; }
+    nav.toc a:hover { color: #fff; text-decoration: none; }
+
+    /* ---------- sections ---------- */
+    section { padding: 72px 0; }
+    section:nth-of-type(even) { background: #fff; }
+    h2 {
+      font-size: 30px; letter-spacing: -.02em; margin-bottom: 10px;
+      font-weight: 800;
+    }
+    .kicker {
+      display: inline-block; font-size: 12px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--em);
+      margin-bottom: 10px;
+    }
+    .lead { color: var(--muted); max-width: 640px; margin-bottom: 40px; }
+
+    .grid { display: grid; gap: 18px; }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+    .card {
+      background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 26px; box-shadow: 0 4px 20px rgba(15, 23, 42, .05);
+    }
+    section:nth-of-type(even) .card { background: var(--paper); }
+    .card h3 { font-size: 17px; margin-bottom: 8px; }
+    .card p { font-size: 14.5px; color: var(--muted); }
+    .card .ico {
+      width: 38px; height: 38px; border-radius: 11px; display: flex;
+      align-items: center; justify-content: center; margin-bottom: 16px;
+      background: linear-gradient(135deg, var(--em-light), var(--teal));
+      color: #fff; font-size: 18px;
+    }
+
+    /* steps */
+    .steps { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+    .step { text-align: center; padding: 22px 14px; }
+    .step .n {
+      width: 34px; height: 34px; border-radius: 50%; margin: 0 auto 12px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, var(--em-light), var(--teal));
+      color: #fff; font-weight: 700; font-size: 15px;
+    }
+    .step b { display: block; font-size: 15px; margin-bottom: 4px; }
+    .step span { font-size: 13px; color: var(--muted); }
+
+    /* architecture */
+    pre.diagram, pre.code {
+      background: var(--ink); color: #e2e8f0; border-radius: var(--radius);
+      padding: 26px; overflow-x: auto; font-size: 13.5px; line-height: 1.7;
+    }
+    pre .c { color: #34d399; }
+    pre .d { color: #64748b; }
+
+    /* chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0; }
+    .chip {
+      font-size: 13px; font-weight: 600; padding: 7px 15px; border-radius: 999px;
+      background: #fff; border: 1px solid var(--line);
+    }
+    .chip.em { background: #d1fae5; border-color: #a7f3d0; color: #065f46; }
+
+    table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+    th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+    td code, li code, p code {
+      font-family: "JetBrains Mono", monospace; font-size: 13px;
+      background: #e8eaee; border-radius: 6px; padding: 2px 7px;
+    }
+
+    .note {
+      border-left: 3px solid var(--amber); background: #fffbeb;
+      border-radius: 0 12px 12px 0; padding: 14px 18px; font-size: 14px;
+      color: #92400e; margin-top: 18px;
+    }
+
+    footer {
+      background: var(--ink); color: #94a3b8; text-align: center;
+      padding: 46px 24px; font-size: 14px;
+    }
+    footer img { width: 28px; height: 28px; border-radius: 8px; vertical-align: middle; margin-right: 10px; }
+    footer a { color: #cbd5e1; }
+    @media (max-width: 640px) { header h1 { font-size: 34px; } h2 { font-size: 24px; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <img class="logo" src="logo.svg" alt="AIVOT logo" />
+  <h1 class="brand">AIVOT</h1>
+  <p class="tagline">Every constraint, a solution.</p>
+  <div class="cta">
+    <a class="btn btn-primary" href="#quick-start">Quick start</a>
+    <a class="btn btn-ghost" href="https://github.com/angesanze/aivot">View on GitHub</a>
+  </div>
+  <nav class="toc">
+    <a href="#why">Why AIVOT</a>
+    <a href="#how">How it works</a>
+    <a href="#engine">The engine</a>
+    <a href="#rules">Rules</a>
+    <a href="#quick-start">Quick start</a>
+  </nav>
+</header>
+
+<section id="why">
+  <div class="wrap">
+    <span class="kicker">Why AIVOT</span>
+    <h2>Scheduling that explains itself</h2>
+    <p class="lead">
+      Most planning tools give you a grid or an error. AIVOT gives you a
+      grid <em>and the reasoning</em>: why this schedule, why an empty one,
+      and — when no schedule exists — exactly which rules collide.
+    </p>
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="ico">⚖</div>
+        <h3>Requirements &amp; preferences</h3>
+        <p>Every rule is either a hard requirement or a weighted preference.
+           The engine satisfies the former, sacrifices the latter as little
+           as possible — and reports every violation with its cost.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🔍</div>
+        <h3>Explained outcomes</h3>
+        <p>Empty result? AIVOT tells you no rule forces assignments.
+           Infeasible? It lists the minimal core of conflicting rules,
+           so you know precisely what to relax.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🧩</div>
+        <h3>No-code rule builder</h3>
+        <p>21 catalog rules across 8 families, plus a custom builder:
+           count assignments per shift, person, day, week or sliding
+           window — with filters — and bound the result. No code.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🛍</div>
+        <h3>Recipe store</h3>
+        <p>Publish rule sets that work, install the community's. Recipes
+           are pure data — never code — with admin moderation built in.</p>
+      </div>
+      <div class="card">
+        <div class="ico">📺</div>
+        <h3>Embeddable schedules</h3>
+        <p>Every schedule can become a public widget: one revocable
+           <span class="mono">&lt;iframe&gt;</span> to paste into any
+           website, intranet or wiki.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🌍</div>
+        <h3>Bilingual, end to end</h3>
+        <p>English and Italian across the UI, API messages, solver
+           explanations, emails and the rule catalog itself. Adding a
+           language is a dictionary, not a rewrite.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <span class="kicker">How it works</span>
+    <h2>Five guided steps</h2>
+    <p class="lead">A path anyone can follow the first time, and skip
+       around freely afterwards.</p>
+    <div class="steps">
+      <div class="card step"><div class="n">1</div><b>Project</b>
+        <span>A container for one planning problem</span></div>
+      <div class="card step"><div class="n">2</div><b>People</b>
+        <span>Names and skills — or bulk import from Excel/CSV</span></div>
+      <div class="card step"><div class="n">3</div><b>Shifts</b>
+        <span>Generated from your day bands and date range</span></div>
+      <div class="card step"><div class="n">4</div><b>Rules</b>
+        <span>Picked from the catalog, tuned with weights</span></div>
+      <div class="card step"><div class="n">5</div><b>Schedule</b>
+        <span>Computed, explained, archived, embeddable</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="engine">
+  <div class="wrap">
+    <span class="kicker">Under the hood</span>
+    <h2>One engine, many rules</h2>
+    <p class="lead">
+      Rules are <em>data</em> (JSON in the database), translated into a
+      CP-SAT model at runtime. The engine — Google OR-Tools — never
+      changes; the variety lives in the catalog.
+    </p>
+    <pre class="diagram">
+USER ── composes ──&gt; ConstraintInstance   <span class="d">JSON data in DB, never code</span>
+                          │
+                          ▼  <span class="d">runtime translation</span>
+                solver/handlers.py        <span class="c">registry: type → ctx.limit(…)</span>
+                          │
+                          ▼
+                solver/engine.py          <span class="c">two-phase CP-SAT</span>
+                          │               <span class="d">1) fast solve, full presolve</span>
+                          │               <span class="d">2) if infeasible → conflict core</span>
+                          ▼
+                Run + explain.py          <span class="c">assignments · violations ·</span>
+                                          <span class="c">conflicts · explanation</span></pre>
+    <p style="margin-top:20px; color:var(--muted); font-size:14.5px">
+      The two-phase design matters: solving without assumption literals
+      keeps CP-SAT's presolve at full strength (milliseconds on typical
+      problems), while the second pass — run only on infeasibility —
+      identifies the minimal set of rules to blame.
+    </p>
+  </div>
+</section>
+
+<section id="rules">
+  <div class="wrap">
+    <span class="kicker">The catalog</span>
+    <h2>21 rules, 8 families — and yours</h2>
+    <div class="chips">
+      <span class="chip">Core rules</span>
+      <span class="chip">Coverage</span>
+      <span class="chip">Capacity</span>
+      <span class="chip">Sequence</span>
+      <span class="chip">Fairness</span>
+      <span class="chip">Preferences</span>
+      <span class="chip">People &amp; pairs</span>
+      <span class="chip em">Custom</span>
+    </div>
+    <div class="grid grid-3">
+      <div class="card"><h3>Minimum coverage</h3>
+        <p>At least N people (optionally with a skill) on every shift.</p></div>
+      <div class="card"><h3>Minimum rest</h3>
+        <p>At least N hours between shifts — midnight-crossing aware.</p></div>
+      <div class="card"><h3>Forbidden sequence</h3>
+        <p>After a night, no morning the day after.</p></div>
+      <div class="card"><h3>Fair distribution</h3>
+        <p>Night shifts spread evenly: max−min within tolerance.</p></div>
+      <div class="card"><h3>Paired people</h3>
+        <p>Tutor and trainee always share the same shifts.</p></div>
+      <div class="card" style="border-color:#a7f3d0">
+        <h3>Custom rule</h3>
+        <p>“Each person, at most 2 nights per sliding 7-day window,
+           weekends only, in August.” Built from a form.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="quick-start">
+  <div class="wrap">
+    <span class="kicker">Quick start</span>
+    <h2>One command</h2>
+    <pre class="code"><span class="d"># clone, then:</span>
+docker compose up --build</pre>
+    <table style="margin-top:26px">
+      <tr><th>What</th><th>Where</th><th>Credentials</th></tr>
+      <tr><td>Platform</td><td class="mono">localhost:5173</td>
+          <td>sign up, or <code>demo / demo1234</code></td></tr>
+      <tr><td>Backoffice</td><td class="mono">localhost:8001/admin</td>
+          <td><code>admin / aivot-admin</code></td></tr>
+      <tr><td>API</td><td class="mono">localhost:8001/api</td>
+          <td>token via <code>/api/auth/login/</code></td></tr>
+    </table>
+    <div class="note">
+      Everything is configurable via <code>.env</code> (emails through
+      Brevo, Google Sign-In, admin credentials) — and nothing breaks if
+      you configure none of it. See the
+      <a href="https://github.com/angesanze/aivot#configuration-optional">README</a>
+      for the full reference.
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p><img src="logo.svg" alt="" /><span class="brand" style="color:#fff">AIVOT</span></p>
+  <p style="margin-top:10px">Every constraint, a solution.</p>
+  <p style="margin-top:18px">
+    Built with <a href="https://developers.google.com/optimization">OR-Tools CP-SAT</a>,
+    Django and React ·
+    <a href="https://github.com/angesanze/aivot">Source on GitHub</a>
+  </p>
+</footer>
+
+</body>
+</html>
