@@ -20,6 +20,9 @@ async function req(path, opts = {}) {
     headers: {
       ...(isForm ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Token ${token}` } : {}),
+      // Il backend risponde (errori, spiegazioni, email, catalogo)
+      // nella lingua dell'interfaccia
+      "Accept-Language": localStorage.getItem("aivot_lang") || "it",
     },
     ...opts,
   });

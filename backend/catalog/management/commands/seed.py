@@ -46,11 +46,11 @@ class Command(BaseCommand):
         con default di sviluppo da cambiare in produzione."""
         if User.objects.filter(is_superuser=True).exists():
             return
-        admin_user = os.environ.get("ADMIN_USERNAME", "admin")
-        admin_pass = os.environ.get("ADMIN_PASSWORD", "aivot-admin")
+        admin_user = os.environ.get("ADMIN_USERNAME") or "admin"
+        admin_pass = os.environ.get("ADMIN_PASSWORD") or "aivot-admin"
         User.objects.create_superuser(
             username=admin_user, password=admin_pass,
-            email=os.environ.get("ADMIN_EMAIL", "admin@aivot.local"))
+            email=os.environ.get("ADMIN_EMAIL") or "admin@aivot.local")
         self.stdout.write(self.style.WARNING(
             f"Superadmin creato ({admin_user} / {admin_pass}): "
             f"cambia la password in produzione."))

@@ -178,6 +178,26 @@ class ProfileTests(APITestCase):
         self.assertTrue(guser.check_password("lamiaprima1"))
 
 
+class I18nTests(APITestCase):
+    """La lingua della risposta segue l'header Accept-Language."""
+
+    def test_error_messages_in_english(self):
+        r = self.client.post("/api/auth/register/", {},
+                             format="json", HTTP_ACCEPT_LANGUAGE="en")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("first and last name", r.data["detail"])
+
+    def test_error_messages_default_italian(self):
+        r = self.client.post("/api/auth/register/", {}, format="json")
+        self.assertIn("nome e cognome", r.data["detail"])
+
+    def test_login_error_translated(self):
+        r = self.client.post("/api/auth/login/",
+                             {"username": "x", "password": "y"},
+                             format="json", HTTP_ACCEPT_LANGUAGE="en")
+        self.assertEqual(r.data["detail"], "Wrong username or password.")
+
+
 class SiteConfigTests(APITestCase):
 
     def test_singleton_and_env_fallback(self):

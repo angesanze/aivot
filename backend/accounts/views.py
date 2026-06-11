@@ -22,6 +22,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from config.translations import tr
 
 from .emails import send_password_reset, send_welcome
 from .models import SiteConfig
@@ -70,7 +71,7 @@ def login(request):
     user = authenticate(username=(request.data.get("username") or "").strip(),
                         password=request.data.get("password") or "")
     if user is None:
-        return _bad("Nome utente o password sbagliati.")
+        return _bad(tr("Nome utente o password sbagliati."))
     return Response(_payload(user))
 
 
@@ -86,8 +87,9 @@ def forgot_password(request):
         token = default_token_generator.make_token(user)
         base = SiteConfig.effective()["frontend_url"].rstrip("/")
         send_password_reset(user, f"{base}/?reset={uid}.{token}")
-    return Response({"detail": "Se l'email è registrata, riceverai a breve "
-                               "il link per reimpostare la password."})
+    return Response({"detail": tr("Se l'email è registrata, riceverai a "
+                                   "breve il link per reimpostare la "
+                                   "password.")})
 
 
 @api_view(["POST"])
@@ -97,15 +99,15 @@ def reset_password(request):
     password = request.data.get("password") or ""
     m = re.fullmatch(r"([A-Za-z0-9_-]+)\.(.+)", code)
     if not m:
-        return _bad("Link di reset non valido.")
+        return _bad(tr("Link di reset non valido."))
     try:
         user = User.objects.get(pk=force_str(urlsafe_base64_decode(m[1])))
     except (User.DoesNotExist, ValueError, OverflowError):
-        return _bad("Link di reset non valido.")
+        return _bad(tr("Link di reset non valido."))
     if not default_token_generator.check_token(user, m[2]):
-        return _bad("Link di reset scaduto o già usato: richiedine un altro.")
+        return _bad(tr("Link di reset scaduto o già usato: richiedine un altro."))
     if len(password) < 8:
-        return _bad("La password deve avere almeno 8 caratteri.")
+        return _bad(tr("La password deve avere almeno 8 caratteri."))
     user.set_password(password)
     user.save(update_fields=["password"])
     Token.objects.filter(user=user).delete()  # invalida le vecchie sessioni
@@ -119,21 +121,21 @@ def google_login(request):
     creando l'account al primo accesso."""
     client_id = SiteConfig.effective()["google_client_id"]
     if not client_id:
-        return _bad("Accesso Google non configurato su questo server.")
+        return _bad(tr("Accesso Google non configurato su questo server."))
     credential = request.data.get("credential") or ""
     try:
         r = http.get("https://oauth2.googleapis.com/tokeninfo",
                      params={"id_token": credential}, timeout=10)
     except http.exceptions.RequestException:
         logger.warning("Google tokeninfo non raggiungibile", exc_info=True)
-        return _bad("Google non raggiungibile: riprova tra poco.")
+        return _bad(tr("Google non raggiungibile: riprova tra poco."))
     if r.status_code != 200:
-        return _bad("Accesso Google non riuscito: riprova.")
+        return _bad(tr("Accesso Google non riuscito: riprova."))
     info = r.json()
     if info.get("aud") != client_id:
-        return _bad("Accesso Google non riuscito: riprova.")
+        return _bad(tr("Accesso Google non riuscito: riprova."))
     if str(info.get("email_verified")).lower() != "true":
-        return _bad("La tua email Google non risulta verificata.")
+        return _bad(tr("La tua email Google non risulta verificata."))
 
     email = info["email"]
     user = User.objects.filter(email__iexact=email).first()
@@ -172,14 +174,14 @@ def me(request):
         if "email" in request.data:
             email = (request.data.get("email") or "").strip()
             if not email:
-                return _bad("L'email è obbligatoria.")
+                return _bad(tr("L'email è obbligatoria."))
             try:
                 validate_email(email)
             except ValidationError:
-                return _bad("Questa email non sembra valida.")
+                return _bad(tr("Questa email non sembra valida."))
             if User.objects.filter(email__iexact=email) \
                            .exclude(pk=user.pk).exists():
-                return _bad("Email già usata da un altro account.")
+                return _bad(tr("Email già usata da un altro account."))
             user.email = email
         user.save()
     return Response(_user_data(user))
@@ -195,12 +197,12 @@ def change_password(request):
     if user.has_usable_password():
         current = request.data.get("current_password") or ""
         if not user.check_password(current):
-            return _bad("La password attuale non è corretta.")
+            return _bad(tr("La password attuale non è corretta."))
     if len(new) < 8:
-        return _bad("La nuova password deve avere almeno 8 caratteri.")
+        return _bad(tr("La nuova password deve avere almeno 8 caratteri."))
     user.set_password(new)
     user.save(update_fields=["password"])
     Token.objects.filter(user=user).delete()
     token = Token.objects.create(user=user)
     return Response({"token": token.key,
-                     "detail": "Password aggiornata."})
+                     "detail": tr("Password aggiornata.")})

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from config.translations import tr
 from .models import ConstraintInstance, Dataset, Resource, Run, TimeSlot
 
 
@@ -7,7 +8,7 @@ class _OwnedDatasetMixin:
     def validate_dataset(self, ds):
         request = self.context.get("request")
         if request and ds.owner_id != request.user.id:
-            raise serializers.ValidationError("Questo progetto non è tuo.")
+            raise serializers.ValidationError(tr("Questo progetto non è tuo."))
         return ds
 
 
@@ -26,12 +27,19 @@ class TimeSlotSerializer(_OwnedDatasetMixin, serializers.ModelSerializer):
 class ConstraintInstanceSerializer(_OwnedDatasetMixin,
                                    serializers.ModelSerializer):
     template_code = serializers.CharField(source="template.code", read_only=True)
-    template_name = serializers.CharField(source="template.name", read_only=True)
+    template_name = serializers.SerializerMethodField()
     family = serializers.CharField(source="template.family", read_only=True)
 
     class Meta:
         model = ConstraintInstance
         fields = "__all__"
+
+    def get_template_name(self, obj):
+        # Nome del template nella lingua della richiesta, come nel catalogo
+        from django.utils.translation import get_language
+        from catalog.translations import translate_template_name
+        return translate_template_name(obj.template.code, obj.template.name,
+                                       get_language())
 
 
 class RunSerializer(serializers.ModelSerializer):

@@ -1,140 +1,144 @@
 # AIVOT
 
-**Ogni vincolo, una soluzione.**
+**Every constraint, a solution.**
 
-Piattaforma di pianificazione sotto vincoli: descrivi persone, turni e
-regole — il motore CP-SAT (Google OR-Tools) calcola la pianificazione
-migliore e, quando non esiste, ti spiega *perché* e *quali* regole sono
-in conflitto. La varietà sta nel catalogo dei vincoli: il motore è uno
-e non cambia mai.
+Constraint-based planning platform: describe people, shifts and rules —
+the CP-SAT engine (Google OR-Tools) computes the best possible schedule
+and, when none exists, explains *why* and *which* rules conflict. The
+variety lives in the rule catalog: the engine is one and never changes.
 
-## Avvio in un comando
+Fully bilingual (English / Italian), switchable live from the UI.
+
+## One-command start
 
 ```bash
 docker compose up --build
 ```
 
-Fatto. Al primo avvio vengono creati automaticamente:
+Done. On first start the platform automatically creates:
 
-| Cosa | Dove | Credenziali |
-|------|------|-------------|
-| Piattaforma | http://localhost:5173 | registrati, oppure `demo` / `demo1234` |
-| Backoffice Django | http://localhost:8001/admin/ | `admin` / `aivot-admin` |
+| What | Where | Credentials |
+|------|-------|-------------|
+| Platform | http://localhost:5173 | sign up, or `demo` / `demo1234` |
+| Django backoffice | http://localhost:8001/admin/ | `admin` / `aivot-admin` |
 | API | http://localhost:8001/api/ | token via `/api/auth/login/` |
 
-L'utente `demo` ha già un progetto d'esempio (reparto infermieri: 9
-persone, 7 giorni, turni M/P/N) pronto da pianificare. **Cambia la
-password del superadmin in produzione** (o impostala via `.env` prima
-del primo avvio).
+The `demo` user comes with a sample project (hospital ward: 9 nurses,
+7 days, M/P/N shifts) ready to schedule. **Change the superadmin
+password in production** (or set it via `.env` before first start).
 
-## Configurazione (facoltativa)
+## Configuration (optional)
 
-Niente è hardcoded: tutto passa da variabili d'ambiente, con default
-che funzionano out-of-the-box.
+Nothing is hardcoded: everything comes from environment variables, with
+defaults that work out of the box.
 
 ```bash
-cp .env.example .env   # poi compila ciò che ti serve
+cp .env.example .env   # then fill in what you need
 ```
 
-| Variabile | A cosa serve |
-|-----------|--------------|
-| `BREVO_API_KEY` | Email transazionali (benvenuto, reset password). Vuota = invii saltati e annotati nei log, l'app funziona comunque |
-| `BREVO_SENDER_EMAIL` | Mittente: **deve essere validato su Brevo** o appartenere a un dominio autenticato, altrimenti Brevo scarta la consegna |
-| `BREVO_SENDER_NAME` | Nome mittente (default: AIVOT) |
-| `GOOGLE_CLIENT_ID` | Abilita il bottone "Continua con Google" (OAuth Client ID da Google Cloud Console). Vuoto = bottone nascosto |
-| `ADMIN_USERNAME` / `ADMIN_PASSWORD` / `ADMIN_EMAIL` | Credenziali del superadmin creato al primo avvio |
-| `FRONTEND_URL` | URL pubblico del frontend, usato nei link delle email |
-| `DEBUG` / `SECRET_KEY` | Produzione: `DEBUG=0` esige una `SECRET_KEY` tua (l'avvio fallisce senza) e chiude il CORS |
+| Variable | Purpose |
+|----------|---------|
+| `BREVO_API_KEY` | Transactional emails (welcome, password reset). Empty = sends are skipped and logged; the app keeps working |
+| `BREVO_SENDER_EMAIL` | Sender address: **must be a validated sender on Brevo** or belong to an authenticated domain, or Brevo silently drops delivery |
+| `BREVO_SENDER_NAME` | Sender display name (default: AIVOT) |
+| `GOOGLE_CLIENT_ID` | Enables the "Continue with Google" button (OAuth Client ID from Google Cloud Console). Empty = button hidden |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` / `ADMIN_EMAIL` | Superadmin created on first start |
+| `FRONTEND_URL` | Public frontend URL, used in email links |
+| `DEBUG` / `SECRET_KEY` | Production: `DEBUG=0` requires your own `SECRET_KEY` (startup fails without it) and locks down CORS |
 
-Ogni valore email/Google è sovrascrivibile **a caldo dal backoffice**
-(`/admin/` → Configurazione piattaforma), incluso un bottone "invia
-email di prova". Il DB vince sull'ambiente; i campi vuoti ricadono
-sull'ambiente.
+Every email/Google value can also be overridden **live from the
+backoffice** (`/admin/` → Platform configuration), including a "send
+test email" action. Database values win; empty fields fall back to the
+environment.
 
-> **Provider email**: oggi l'integrazione supporta **solo Brevo**
-> (https://brevo.com, piano gratuito disponibile). L'invio è isolato in
-> `backend/accounts/emails.py`: aggiungere SMTP generico o un altro
-> provider significa toccare una sola funzione.
+> **Email provider**: the integration currently supports **Brevo only**
+> (https://brevo.com, free tier available). Sending is isolated in
+> `backend/accounts/emails.py`: adding generic SMTP or another provider
+> means touching a single function.
 
 ## Stack
 
-- **Backend**: Django 5 + DRF · solver OR-Tools CP-SAT · PostgreSQL 16
-  (sqlite come fallback automatico senza Docker)
+- **Backend**: Django 5 + DRF · OR-Tools CP-SAT solver · PostgreSQL 16
+  (sqlite as automatic fallback without Docker)
 - **Frontend**: React 18 + Vite + Tailwind
 
-## Cosa c'è dentro
+## What's inside
 
-- **Percorso guidato in 5 passi**: progetto → persone (anche import
-  Excel/CSV) → turni → regole → pianificazione
-- **Catalogo di 21 regole** in 8 famiglie (copertura, capacità,
-  sequenza, equità, persone…), ognuna usabile come **obbligo** o come
-  **preferenza pesata**
-- **Regola "Su misura"**: costruisci vincoli nuovi da un form guidato
-  (per turno/persona/giorno/settimana/finestra mobile, con filtri per
-  codice turno, skill, persona, giorni della settimana, intervallo di
-  date) — senza scrivere codice
-- **Esiti spiegati**: ogni run dice *perché* ha prodotto quel risultato;
-  le griglie vuote vengono motivate, l'infeasibility elenca il nucleo
-  minimo di regole in conflitto
-- **Archivio pianificazioni**: rinomina, raggruppa, elimina, esporta CSV
-- **Widget embeddabile**: ogni pianificazione genera un `<iframe>`
-  pubblico (token revocabile) da incollare in qualsiasi sito
-- **Store delle ricette**: pubblica i tuoi set di regole, installa
-  quelli della community (solo dati, mai codice; moderazione da admin)
-- **Area utente**: registrazione completa, Google Sign-In, reset
-  password via email, profilo modificabile
-- **Backoffice Django** con gestione di utenti, progetti, run, store e
-  configurazione della piattaforma
+- **Guided 5-step flow**: project → people (with Excel/CSV bulk import)
+  → shifts → rules → schedule
+- **Catalog of 21 rules** across 8 families (coverage, capacity,
+  sequence, fairness, people…), each usable as a **requirement** or a
+  **weighted preference**
+- **Custom rule builder**: create new constraints from a guided form
+  (per shift / person / day / week / sliding window, with filters for
+  shift code, skill, specific person, weekdays, date range) — no code
+- **Explained outcomes**: every run says *why* it produced that result;
+  empty grids are motivated, infeasibility lists the minimal core of
+  conflicting rules
+- **Schedule archive**: rename, group, delete, CSV export
+- **Embeddable widget**: every schedule can generate a public `<iframe>`
+  (revocable token) to paste into any website
+- **Recipe store**: publish your rule sets, install the community's
+  (data only, never code; admin moderation)
+- **User area**: full registration, Google Sign-In, password reset via
+  email, editable profile
+- **Internationalization**: English and Italian end to end — UI, API
+  messages, solver explanations, emails, and the rule catalog itself
+  (translated at serialization time); adding a language = one JSON file
+  on the frontend + one table on the backend
+- **Django backoffice** managing users, projects, runs, store and
+  platform configuration
 
-## Architettura
+## Architecture
 
 ```
-UTENTE ── compone ──> ConstraintInstance (dati JSON a DB, mai codice)
+USER ── composes ──> ConstraintInstance (JSON data in DB, never code)
                             │
-                            ▼  traduzione a runtime
-                  solver/handlers.py   registry: tipo -> ctx.limit(...)
+                            ▼  runtime translation
+                  solver/handlers.py   registry: type -> ctx.limit(...)
                             │
                             ▼
-                  solver/engine.py     CP-SAT a due fasi:
-                            │          1) solve veloce (presolve pieno)
-                            │          2) se INFEASIBLE, passata con
-                            ▼             assumptions -> conflitti
-                  Run + explain.py     assegnazioni, violazioni soft,
-                                       conflitti hard, spiegazione
+                  solver/engine.py     two-phase CP-SAT:
+                            │          1) fast solve (full presolve)
+                            │          2) if INFEASIBLE, assumptions
+                            ▼             pass -> conflict core
+                  Run + explain.py     assignments, soft violations,
+                                       hard conflicts, explanation
 ```
 
-Aggiungere una regola = un handler in `solver/handlers.py` (poche righe
-grazie a `ctx.limit`) + una voce in `catalog/data.py` + un test. Form,
-catalogo UI, spiegazioni e store si aggiornano da soli. Il seed
-verifica all'avvio la coerenza catalogo ↔ handler.
+Adding a rule = one handler in `solver/handlers.py` (a few lines thanks
+to `ctx.limit`) + one entry in `catalog/data.py` (+ its English strings
+in `catalog/translations.py`) + one test. Forms, catalog UI,
+explanations and the store update themselves. The seed verifies
+catalog ↔ handler consistency at startup.
 
-## Test
+## Tests
 
 ```bash
-docker compose exec backend python manage.py test    # 62 test
+docker compose exec backend python manage.py test    # 67 tests
 ```
 
-Coprono motore (ogni famiglia di vincoli con verifica delle soluzioni
-prodotte), autenticazione, isolamento multi-utente, store, import file
-e widget pubblico.
+They cover the engine (every rule family, verified against the
+solutions it produces), authentication, multi-user isolation, the
+store, file import, the public widget and localization.
 
-## Sviluppo senza Docker
+## Development without Docker
 
 ```bash
 cd backend
 pip install -r requirements.txt
 python manage.py migrate && python manage.py seed
-python manage.py runserver           # sqlite se POSTGRES_HOST non è settato
+python manage.py runserver           # sqlite if POSTGRES_HOST is unset
 
 cd ../frontend
-npm install && npm run dev           # proxy /api -> :8000
+npm install && npm run dev           # proxies /api -> :8000
 ```
 
 ## Roadmap
 
-1. Solve asincrono (Cloud Tasks su GCP / coda) — oggi è sincrono, ok
-   fino a pochi utenti simultanei
-2. Warm start: l'ultima soluzione come hint per le ripianificazioni
-3. Regole condizionali ("se lavora sabato, domenica libera") nel
-   builder Su misura
-4. Provider email alternativi (SMTP generico)
+1. Async solve (Cloud Tasks on GCP / a queue) — currently synchronous,
+   fine up to a few concurrent users
+2. Warm start: feed the last solution as a hint when re-planning
+3. Conditional rules ("if working Saturday, then Sunday off") in the
+   custom rule builder
+4. Alternative email providers (generic SMTP)

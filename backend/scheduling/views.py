@@ -11,6 +11,7 @@ from rest_framework.response import Response
 
 from solver.engine import solve
 from solver.explain import explain
+from config.translations import tr
 from .importers import ImportError_, parse_people_file
 from .models import ConstraintInstance, Dataset, Resource, Run, TimeSlot
 from .serializers import (ConstraintInstanceSerializer, DatasetSerializer,
@@ -86,7 +87,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
             logger.exception("solve fallito per dataset %s", ds.pk)
             run.status = "ERROR"
             run.error = str(exc)
-            run.explanation = (
+            run.explanation = tr(
                 "Il calcolo si è interrotto per un errore tecnico (vedi "
                 "messaggio sotto), non per colpa delle regole.")
         run.save()
@@ -123,11 +124,11 @@ class ResourceViewSet(_BulkCreateMixin, _DatasetScopedMixin, viewsets.ModelViewS
         ds = Dataset.objects.filter(pk=request.data.get("dataset"),
                                     owner=request.user).first()
         if ds is None:
-            return Response({"detail": "Progetto non trovato."},
+            return Response({"detail": tr("Progetto non trovato.")},
                             status=status.HTTP_400_BAD_REQUEST)
         upload = request.FILES.get("file")
         if upload is None:
-            return Response({"detail": "Nessun file caricato."},
+            return Response({"detail": tr("Nessun file caricato.")},
                             status=status.HTTP_400_BAD_REQUEST)
         try:
             people, skipped = parse_people_file(upload.name, upload.read())
@@ -151,7 +152,7 @@ class TimeSlotViewSet(_BulkCreateMixin, _DatasetScopedMixin, viewsets.ModelViewS
         """Svuota tutti gli slot di un dataset."""
         ds = request.data.get("dataset")
         if not ds:
-            return Response({"detail": "dataset richiesto"},
+            return Response({"detail": tr("dataset richiesto")},
                             status=status.HTTP_400_BAD_REQUEST)
         deleted, _ = TimeSlot.objects.filter(
             dataset_id=ds, dataset__owner=request.user).delete()
@@ -199,11 +200,11 @@ def embed_run(request, token):
     run = (Run.objects.exclude(share_token="")
            .filter(share_token=token).select_related("dataset").first())
     if run is None:
-        return Response({"detail": "Widget non trovato o revocato."},
+        return Response({"detail": tr("Widget non trovato o revocato.")},
                         status=status.HTTP_404_NOT_FOUND)
     ds = run.dataset
     return Response({
-        "name": run.name or f"Pianificazione #{run.pk}",
+        "name": run.name or tr("Pianificazione #{id}", id=run.pk),
         "created_at": run.created_at,
         "assignments": run.assignments,
         "resources": [{"id": r.id, "name": r.name}

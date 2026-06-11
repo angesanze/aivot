@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { CheckIcon, ChevronIcon } from "./icons.jsx";
+import { useT } from "../i18n.jsx";
 
 /* Selettore del progetto attivo: dropdown custom coerente con la
    sidebar scura, al posto del select nativo del browser. */
 export default function ProjectPicker({ datasets, value, onChange }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const current = datasets.find((d) => d.id === value);
@@ -26,7 +28,7 @@ export default function ProjectPicker({ datasets, value, onChange }) {
         aria-expanded={open}
         className="w-full flex items-center gap-2 bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm font-medium hover:border-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 transition-colors"
       >
-        <span className="truncate">{current?.name ?? "Scegli progetto"}</span>
+        <span className="truncate">{current?.name ?? t("app.pick_project")}</span>
         <span className="ml-auto">
           <ChevronIcon open={open} />
         </span>

@@ -1,32 +1,31 @@
 import React, { useState } from "react";
 import { api } from "../api";
 import { codeColors } from "./ui.jsx";
+import { useT, useLocale } from "../i18n.jsx";
 
-/* Esiti del solver tradotti per chi non sa cos'è CP-SAT. */
-export const STATUS_INFO = {
-  OPTIMAL: {
-    label: "Ottimale",
-    cls: "bg-emerald-100 text-emerald-700",
-    desc: "Trovata la migliore pianificazione possibile con queste regole.",
-  },
-  FEASIBLE: {
-    label: "Valida",
-    cls: "bg-emerald-100 text-emerald-700",
-    desc: "Trovata una pianificazione valida entro il tempo limite. Potrebbe esisterne una migliore: riprova con più tempo.",
-  },
-  INFEASIBLE: {
-    label: "Impossibile",
-    cls: "bg-rose-100 text-rose-700",
-    desc: "Nessuna pianificazione rispetta tutti gli obblighi: alcuni sono in conflitto tra loro.",
-  },
-  ERROR: { label: "Errore", cls: "bg-rose-100 text-rose-700", desc: "Qualcosa è andato storto durante il calcolo." },
-  UNKNOWN: {
-    label: "Tempo esaurito",
-    cls: "bg-amber-100 text-amber-700",
-    desc: "Il tempo limite è scaduto prima di un esito. Aumentalo e riprova.",
-  },
-  RUNNING: { label: "In corso", cls: "bg-amber-100 text-amber-700", desc: "" },
-  PENDING: { label: "In attesa", cls: "bg-slate-100 text-slate-500", desc: "" },
+/* Esiti del solver tradotti per chi non sa cos'è CP-SAT.
+   Le classi restano qui; etichette e descrizioni vivono nei dizionari
+   i18n e si risolvono al render con statusInfo(t, status). */
+const STATUS_CLS = {
+  OPTIMAL: "bg-emerald-100 text-emerald-700",
+  FEASIBLE: "bg-emerald-100 text-emerald-700",
+  INFEASIBLE: "bg-rose-100 text-rose-700",
+  ERROR: "bg-rose-100 text-rose-700",
+  UNKNOWN: "bg-amber-100 text-amber-700",
+  RUNNING: "bg-amber-100 text-amber-700",
+  PENDING: "bg-slate-100 text-slate-500",
+};
+
+/* Stati senza descrizione (transitori). */
+const NO_DESC = ["RUNNING", "PENDING"];
+
+export const statusInfo = (t, status) => {
+  const key = STATUS_CLS[status] ? status : "UNKNOWN";
+  return {
+    label: t(`status.${key}.label`),
+    cls: STATUS_CLS[key],
+    desc: NO_DESC.includes(key) ? "" : t(`status.${key}.desc`),
+  };
 };
 
 /* Esito tecnicamente riuscito ma con griglia vuota: senza spiegazione
@@ -34,18 +33,12 @@ export const STATUS_INFO = {
 export const isEmptyOk = (run) =>
   ["OPTIMAL", "FEASIBLE"].includes(run.status) && run.assignments.length === 0;
 
-/* Fallback per le run salvate prima che il backend generasse la motivazione. */
-const FALLBACK_EMPTY_EXPLANATION =
-  "Il calcolo è riuscito, ma nessuna regola attiva obbliga ad assegnare " +
-  "qualcuno: la griglia vuota rispetta tutti gli obblighi (le regole di " +
-  "capacità mettono solo un tetto, non un minimo). Aggiungi una regola " +
-  "«copertura minima» per riempire la griglia.";
-
-export const runTitle = (run) => run.name || `Pianificazione #${run.id}`;
+export const runTitle = (t, run) => run.name || t("run.title", { id: run.id });
 
 /* Griglia turni: persone × giorni, celle = codici turno assegnati.
    Esportata: la usa anche la pagina pubblica del widget (/embed). */
 export function ScheduleGrid({ run, resources, slots }) {
+  const t = useT();
   const slotById = Object.fromEntries(slots.map((s) => [s.id, s]));
   const days = [...new Set(slots.map((s) => s.day))].sort();
   const byResource = {};
@@ -63,7 +56,7 @@ export function ScheduleGrid({ run, resources, slots }) {
   const colorByCode = codeColors(slots.map((s) => s.code));
 
   const exportCsv = () => {
-    const header = ["Persona", ...days];
+    const header = [t("run.grid.person"), ...days];
     const rows = resources.map((r) => [
       r.name,
       ...days.map((d) => byResource[r.id]?.[d] ?? ""),
@@ -74,7 +67,7 @@ export function ScheduleGrid({ run, resources, slots }) {
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `pianificazione-${run.id}.csv`;
+    a.download = t("run.grid.csv_filename", { id: run.id });
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -85,7 +78,7 @@ export function ScheduleGrid({ run, resources, slots }) {
         <table className="text-sm font-mono">
           <thead>
             <tr className="text-muted text-xs">
-              <th className="text-left py-2 pr-4 font-normal">Persona</th>
+              <th className="text-left py-2 pr-4 font-normal">{t("run.grid.person")}</th>
               {days.map((d) => (
                 <th key={d} className="px-2 py-2 font-normal">
                   {d.slice(5)}
@@ -135,13 +128,13 @@ export function ScheduleGrid({ run, resources, slots }) {
               {s.start && ` ${s.start.slice(0, 5)}–${s.end?.slice(0, 5)}`}
             </span>
           ))}
-          <span>· = riposo</span>
+          <span>{t("run.grid.rest")}</span>
         </p>
         <button
           onClick={exportCsv}
           className="ml-auto text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white/80 border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm hover:shadow transition-all"
         >
-          ↓ Esporta CSV
+          ↓ {t("run.grid.export_csv")}
         </button>
       </div>
     </div>
@@ -151,13 +144,14 @@ export function ScheduleGrid({ run, resources, slots }) {
 /* Widget embeddabile: genera il link pubblico e lo snippet <iframe>
    da incollare in un sito. Revocabile in ogni momento. */
 function EmbedPanel({ run }) {
+  const t = useT();
   const [token, setToken] = useState(run.share_token || "");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(null);
 
   const snippet = token
-    ? `<iframe src="${window.location.origin}/embed/${token}" width="100%" height="420" style="border:0;border-radius:12px" loading="lazy" title="${runTitle(run)}"></iframe>`
+    ? `<iframe src="${window.location.origin}/embed/${token}" width="100%" height="420" style="border:0;border-radius:12px" loading="lazy" title="${runTitle(t, run)}"></iframe>`
     : "";
 
   const call = async (fn, after) => {
@@ -176,7 +170,7 @@ function EmbedPanel({ run }) {
   return (
     <div className="border-t border-line pt-3 space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-        Widget per il tuo sito
+        {t("embed.widget_title")}
       </p>
       {!token ? (
         <div className="flex flex-wrap items-center gap-3">
@@ -187,12 +181,9 @@ function EmbedPanel({ run }) {
             disabled={busy}
             className="text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white/80 border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm hover:shadow transition-all"
           >
-            &lt;/&gt; Genera codice widget
+            &lt;/&gt; {t("embed.generate")}
           </button>
-          <span className="text-xs text-muted">
-            Crea un link pubblico: chiunque abbia il codice vedrà questa
-            griglia (nomi inclusi), dentro qualunque pagina web.
-          </span>
+          <span className="text-xs text-muted">{t("embed.generate_hint")}</span>
         </div>
       ) : (
         <div className="space-y-2">
@@ -212,7 +203,7 @@ function EmbedPanel({ run }) {
               }}
               className="text-xs font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-500 rounded-lg px-3 py-1.5"
             >
-              {copied ? "✓ Copiato" : "Copia codice"}
+              {copied ? `✓ ${t("embed.copied")}` : t("embed.copy")}
             </button>
             <a
               href={`/embed/${token}`}
@@ -220,7 +211,7 @@ function EmbedPanel({ run }) {
               rel="noreferrer"
               className="text-xs font-medium text-op underline underline-offset-2"
             >
-              Anteprima
+              {t("embed.preview")}
             </a>
             <button
               onClick={() =>
@@ -229,12 +220,10 @@ function EmbedPanel({ run }) {
               disabled={busy}
               className="ml-auto text-xs font-medium text-danger/70 hover:text-danger"
             >
-              Revoca il widget
+              {t("embed.revoke")}
             </button>
           </div>
-          <p className="text-xs text-muted">
-            La revoca spegne il widget ovunque sia stato incollato.
-          </p>
+          <p className="text-xs text-muted">{t("embed.revoke_hint")}</p>
         </div>
       )}
       {error && <p className="text-xs text-danger">{error}</p>}
@@ -246,7 +235,9 @@ function EmbedPanel({ run }) {
    spiegazione, conflitti, violazioni e griglia. `actions` è uno slot
    per i comandi di gestione (rinomina, elimina...) usato dall'archivio. */
 export default function RunCard({ run, resources, slots, onGoTo, open, onToggle, actions }) {
-  const info = STATUS_INFO[run.status] || STATUS_INFO.UNKNOWN;
+  const t = useT();
+  const locale = useLocale();
+  const info = statusInfo(t, run.status);
   return (
     <article className="bg-white/70 backdrop-blur border border-slate-200/70 rounded-2xl shadow-[0_4px_20px_rgba(15,23,42,0.06)]">
       <div className="flex items-center px-4">
@@ -260,22 +251,22 @@ export default function RunCard({ run, resources, slots, onGoTo, open, onToggle,
             {info.label}
           </span>
           <span className="text-sm font-medium text-paper truncate">
-            {runTitle(run)}
+            {runTitle(t, run)}
           </span>
           <span className="font-mono text-xs text-muted">
-            #{run.id} · {new Date(run.created_at).toLocaleString("it-IT")}
+            #{run.id} · {new Date(run.created_at).toLocaleString(locale)}
           </span>
           {run.wall_time != null && (
             <span className="font-mono text-xs text-muted">
-              calcolata in {run.wall_time}s
+              {t("run.computed_in", { s: run.wall_time })}
             </span>
           )}
           {run.objective != null && run.objective > 0 && (
             <span
               className="font-mono text-xs text-warn"
-              title="Somma dei pesi delle preferenze violate: più basso è, meglio è"
+              title={t("run.penalty_title")}
             >
-              penalità {run.objective}
+              {t("run.penalty", { n: run.objective })}
             </span>
           )}
           <span
@@ -283,7 +274,7 @@ export default function RunCard({ run, resources, slots, onGoTo, open, onToggle,
               isEmptyOk(run) ? "text-warn font-semibold" : "text-muted"
             }`}
           >
-            {run.assignments.length} assegnazioni {open ? "▾" : "▸"}
+            {t("run.assignments", { n: run.assignments.length })} {open ? "▾" : "▸"}
           </span>
         </button>
         {actions && <div className="flex items-center gap-1 pl-2 shrink-0">{actions}</div>}
@@ -301,17 +292,15 @@ export default function RunCard({ run, resources, slots, onGoTo, open, onToggle,
               }`}
             >
               <p className="font-medium mb-1">
-                {isEmptyOk(run)
-                  ? "Perché zero assegnazioni?"
-                  : "Perché questo risultato?"}
+                {isEmptyOk(run) ? t("run.why_empty") : t("run.why_result")}
               </p>
-              <p>{run.explanation || FALLBACK_EMPTY_EXPLANATION}</p>
+              <p>{run.explanation || t("run.empty_explanation")}</p>
               {isEmptyOk(run) && (
                 <button
                   onClick={() => onGoTo("rules")}
                   className="mt-2 text-op underline underline-offset-2"
                 >
-                  Vai alle regole
+                  {t("run.go_to_rules")}
                 </button>
               )}
             </div>
@@ -319,7 +308,7 @@ export default function RunCard({ run, resources, slots, onGoTo, open, onToggle,
           {run.status === "INFEASIBLE" && (
             <div className="space-y-2">
               <p className="text-danger text-sm font-medium">
-                Questi obblighi non possono valere tutti insieme:
+                {t("run.infeasible_intro")}
               </p>
               <ul className="font-mono text-sm text-paper">
                 {run.conflicts.map((c) => (
@@ -327,13 +316,12 @@ export default function RunCard({ run, resources, slots, onGoTo, open, onToggle,
                 ))}
               </ul>
               <p className="text-sm text-muted">
-                Per sbloccare: trasformane uno in preferenza, allenta i
-                suoi valori, oppure aggiungi persone o turni.{" "}
+                {t("run.infeasible_help")}{" "}
                 <button
                   onClick={() => onGoTo("rules")}
                   className="text-op underline underline-offset-2"
                 >
-                  Vai alle regole
+                  {t("run.go_to_rules")}
                 </button>
               </p>
             </div>
@@ -341,12 +329,12 @@ export default function RunCard({ run, resources, slots, onGoTo, open, onToggle,
           {run.violations.length > 0 && (
             <div>
               <p className="text-warn text-sm font-medium mb-1">
-                Preferenze non rispettate del tutto:
+                {t("run.violations_title")}
               </p>
               <ul className="font-mono text-xs text-muted">
                 {run.violations.map((v, i) => (
                   <li key={i}>
-                    · {v.constraint} (violata ×{v.amount}, costo {v.cost})
+                    · {v.constraint} ({t("run.violation_detail", { n: v.amount, c: v.cost })})
                   </li>
                 ))}
               </ul>

@@ -1,15 +1,11 @@
 import React, { useState } from "react";
+import { useT } from "../i18n.jsx";
 
-/* Etichette in chiaro per le famiglie di vincoli del catalogo. */
-export const FAMILY_LABELS = {
-  base: "Regole di base",
-  copertura: "Copertura",
-  capacita: "Capacità",
-  sequenza: "Sequenza",
-  equita: "Equità",
-  preferenze: "Preferenze",
-  persone: "Persone e coppie",
-  custom: "Su misura",
+/* Etichetta tradotta per le famiglie di vincoli del catalogo:
+   familyLabel(t, "copertura") -> "Copertura" / "Coverage". */
+export const familyLabel = (t, family) => {
+  const label = t(`family.${family}`);
+  return label === `family.${family}` ? family : label;
 };
 
 /* Ogni famiglia ha il suo colore: si riconosce a colpo d'occhio. */
@@ -54,6 +50,7 @@ export const cardCls =
 
 /* Intestazione di ogni passo: barra di avanzamento + titolo grande. */
 export function StepHeader({ step, title, children }) {
+  const t = useT();
   return (
     <header className="mb-8 max-w-3xl">
       <div className="flex items-center gap-1.5 mb-3">
@@ -70,7 +67,7 @@ export function StepHeader({ step, title, children }) {
           />
         ))}
         <span className="ml-2 text-xs font-semibold uppercase tracking-wider text-emerald-700">
-          Passo {step} di 5
+          {t("ui.step_of", { n: step })}
         </span>
       </div>
       <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
@@ -84,8 +81,10 @@ export function StepHeader({ step, title, children }) {
 }
 
 /* Riquadro informativo richiudibile: spiega senza invadere. */
-export function Hint({ title = "Come funziona?", children, open: openDefault = false }) {
+export function Hint({ title, children, open: openDefault = false }) {
+  const t = useT();
   const [open, setOpen] = useState(openDefault);
+  title = title ?? t("ui.hint_title");
   return (
     <div className="bg-gradient-to-br from-emerald-50/90 to-teal-50/60 backdrop-blur border border-emerald-200/70 rounded-2xl overflow-hidden">
       <button
@@ -119,8 +118,10 @@ export function Field({ label, hint, children }) {
 
 /* Conferma inline in due tempi: niente window.confirm. Il primo click
    trasforma il bottone in "Confermi? Sì / No". */
-export function ConfirmButton({ onConfirm, children, confirmLabel = "Confermi?", className = "" }) {
+export function ConfirmButton({ onConfirm, children, confirmLabel, className = "" }) {
+  const t = useT();
   const [asking, setAsking] = useState(false);
+  confirmLabel = confirmLabel ?? t("ui.confirm");
   if (!asking) {
     return (
       <button onClick={() => setAsking(true)} className={className}>
@@ -140,13 +141,13 @@ export function ConfirmButton({ onConfirm, children, confirmLabel = "Confermi?",
         }}
         className="text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg px-2.5 py-1"
       >
-        Sì
+        {t("ui.confirm_yes")}
       </button>
       <button
         onClick={() => setAsking(false)}
         className="text-xs font-medium text-muted hover:text-paper px-1 py-1"
       >
-        No
+        {t("ui.confirm_no")}
       </button>
     </span>
   );

@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from catalog.models import ConstraintTemplate
+from config.translations import tr
 from scheduling.models import ConstraintInstance, Dataset
 
 from .models import StoreItem
@@ -42,7 +43,7 @@ class StoreItemViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
         if instance.author != self.request.user \
                 and not self.request.user.is_staff:
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Puoi eliminare solo le tue ricette.")
+            raise PermissionDenied(tr("Puoi eliminare solo le tue ricette."))
         instance.delete()
 
     @action(detail=False, methods=["post"])
@@ -51,11 +52,11 @@ class StoreItemViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
         Le regole legate a persone specifiche vengono scartate."""
         title = (request.data.get("title") or "").strip()
         if not title:
-            return _bad("Dai un titolo alla ricetta.")
+            return _bad(tr("Dai un titolo alla ricetta."))
         ds = Dataset.objects.filter(pk=request.data.get("dataset"),
                                     owner=request.user).first()
         if ds is None:
-            return _bad("Progetto non trovato.")
+            return _bad(tr("Progetto non trovato."))
 
         rules, skipped = [], 0
         for c in ds.constraints.filter(enabled=True) \
@@ -67,9 +68,9 @@ class StoreItemViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
                           "nature": c.nature, "weight": c.weight,
                           "label": c.display_label()})
         if not rules:
-            return _bad("Il progetto non ha regole pubblicabili: quelle "
-                        "legate a persone specifiche non si possono "
-                        "condividere.")
+            return _bad(tr("Il progetto non ha regole pubblicabili: quelle "
+                           "legate a persone specifiche non si possono "
+                           "condividere."))
 
         item = StoreItem.objects.create(
             author=request.user, title=title,
@@ -86,7 +87,7 @@ class StoreItemViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
         ds = Dataset.objects.filter(pk=request.data.get("dataset"),
                                     owner=request.user).first()
         if ds is None:
-            return _bad("Progetto non trovato.")
+            return _bad(tr("Progetto non trovato."))
 
         templates = {t.code: t for t in ConstraintTemplate.objects.all()}
         created, unknown = 0, []

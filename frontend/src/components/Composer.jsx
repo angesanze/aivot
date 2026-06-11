@@ -5,15 +5,17 @@ import {
   Hint,
   Field,
   EmptyState,
-  FAMILY_LABELS,
+  familyLabel,
   FAMILY_COLORS,
   inputCls,
   btnPrimary,
   btnGhost,
 } from "./ui.jsx";
 import { ParamFields, NatureToggle } from "./ConstraintFields.jsx";
+import { useT } from "../i18n.jsx";
 
 export default function Composer({ dsId, onChanged, onNext }) {
+  const t = useT();
   const [templates, setTemplates] = useState([]);
   const [resources, setResources] = useState([]);
   const [constraints, setConstraints] = useState([]);
@@ -128,25 +130,22 @@ export default function Composer({ dsId, onChanged, onNext }) {
 
   return (
     <div className="space-y-6">
-      <StepHeader step={4} title="Componi le regole della pianificazione">
-        Scegli le regole dal catalogo a destra e impostane i valori. Ogni
-        regola è un <b className="text-paper">obbligo</b> (va rispettata per
-        forza) o una <b className="text-paper">preferenza</b> (violarla costa
-        una penalità che il motore cerca di minimizzare).
+      <StepHeader step={4} title={t("composer.step_title")}>
+        {t("composer.step_desc_1")}
+        <b className="text-paper">{t("composer.step_desc_hard")}</b>
+        {t("composer.step_desc_2")}
+        <b className="text-paper">{t("composer.step_desc_soft")}</b>
+        {t("composer.step_desc_3")}
       </StepHeader>
 
       <div className="grid lg:grid-cols-[1fr_300px] gap-6 items-start">
         <div className="space-y-2">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">
-            Regole attive nel progetto · {constraints.length}
+            {t("composer.active_rules", { n: constraints.length })}
           </h3>
 
           {constraints.length === 0 && !editor && (
-            <EmptyState>
-              Nessuna regola ancora. Inizia dal catalogo a destra: per i turni
-              di lavoro, quasi sempre servono "Un turno al giorno per persona"
-              e una "Copertura minima".
-            </EmptyState>
+            <EmptyState>{t("composer.empty")}</EmptyState>
           )}
 
           {constraints.map((c) => (
@@ -163,11 +162,11 @@ export default function Composer({ dsId, onChanged, onNext }) {
                     FAMILY_COLORS[c.family] || "bg-slate-100 text-slate-600"
                   }`}
                 >
-                  {FAMILY_LABELS[c.family] || c.family}
+                  {familyLabel(t, c.family)}
                 </span>
                 {!c.enabled && (
                   <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                    disattivata
+                    {t("composer.disabled_chip")}
                   </span>
                 )}
                 <div className="ml-auto flex items-center gap-3">
@@ -178,9 +177,9 @@ export default function Composer({ dsId, onChanged, onNext }) {
                   {c.nature === "soft" && (
                     <label
                       className="font-mono text-xs text-muted"
-                      title="Quanto pesa violare questa preferenza: più alto = il motore la sacrifica per ultima"
+                      title={t("composer.weight_title")}
                     >
-                      peso{" "}
+                      {t("composer.weight_label")}{" "}
                       <input
                         type="number"
                         min="1"
@@ -194,27 +193,27 @@ export default function Composer({ dsId, onChanged, onNext }) {
               </div>
               <div className="flex flex-wrap items-center gap-3 mt-2">
                 <p className="text-sm text-muted">
-                  {paramSummary(c) || "Senza parametri"}
+                  {paramSummary(c) || t("composer.no_params")}
                 </p>
                 <div className="ml-auto flex items-center gap-3">
                   <button
                     onClick={() => startEdit(c)}
                     className="text-xs font-medium text-muted hover:text-paper"
                   >
-                    modifica
+                    {t("common.edit")}
                   </button>
                   <button
                     onClick={() => toggle(c, "enabled", !c.enabled)}
                     className="text-xs font-medium text-muted hover:text-paper"
-                    title="Una regola disattivata resta salvata ma il motore la ignora"
+                    title={t("composer.toggle_title")}
                   >
-                    {c.enabled ? "disattiva" : "attiva"}
+                    {c.enabled ? t("composer.disable") : t("composer.enable")}
                   </button>
                   <button
                     onClick={() => api.deleteConstraint(c.id).then(changed)}
                     className="text-xs font-medium text-danger/70 hover:text-danger"
                   >
-                    elimina
+                    {t("common.delete")}
                   </button>
                 </div>
               </div>
@@ -227,7 +226,9 @@ export default function Composer({ dsId, onChanged, onNext }) {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-medium">
-                    {editor.id == null ? "Nuova regola: " : "Modifica: "}
+                    {editor.id == null
+                      ? t("composer.editor_new")
+                      : t("composer.editor_edit")}
                     {editor.template.name}
                   </h3>
                   {editor.template.description && (
@@ -243,8 +244,8 @@ export default function Composer({ dsId, onChanged, onNext }) {
               </div>
               <p className="text-xs text-muted border-l-2 border-line pl-2">
                 {editor.nature === "hard"
-                  ? "Obbligo: se le regole obbligatorie sono incompatibili tra loro, il motore non troverà nessuna pianificazione e ti indicherà quali sono in conflitto."
-                  : "Preferenza: il motore cerca di rispettarla, ma può violarla se necessario. Il peso decide quanto costa ogni violazione."}
+                  ? t("composer.explain_hard")
+                  : t("composer.explain_soft")}
               </p>
               <div className="grid sm:grid-cols-2 gap-3">
                 <ParamFields
@@ -256,8 +257,8 @@ export default function Composer({ dsId, onChanged, onNext }) {
                   }
                 />
                 <Field
-                  label="Etichetta (facoltativa)"
-                  hint="Un nome tuo per riconoscerla, es. 'Almeno un senior di notte'."
+                  label={t("composer.label_field")}
+                  hint={t("composer.label_hint")}
                 >
                   <input
                     value={editor.label}
@@ -268,8 +269,8 @@ export default function Composer({ dsId, onChanged, onNext }) {
                 </Field>
                 {editor.nature === "soft" && (
                   <Field
-                    label="Peso penalità"
-                    hint="Più alto = violazione più costosa. Usa pesi diversi per dire cosa conta di più."
+                    label={t("composer.weight_field")}
+                    hint={t("composer.weight_hint")}
                   >
                     <input
                       type="number"
@@ -285,14 +286,16 @@ export default function Composer({ dsId, onChanged, onNext }) {
               </div>
               <div className="flex gap-2">
                 <button onClick={save} disabled={missingRequired} className={btnPrimary}>
-                  {editor.id == null ? "Aggiungi regola" : "Salva modifiche"}
+                  {editor.id == null
+                    ? t("composer.add_rule")
+                    : t("composer.save_changes")}
                 </button>
                 <button onClick={() => setEditor(null)} className={btnGhost}>
-                  Annulla
+                  {t("common.cancel")}
                 </button>
                 {missingRequired && (
                   <span className="text-xs text-warn self-center">
-                    Compila i campi obbligatori (*)
+                    {t("composer.required_missing")}
                   </span>
                 )}
               </div>
@@ -302,7 +305,7 @@ export default function Composer({ dsId, onChanged, onNext }) {
           {constraints.length > 0 && !editor && (
             <div className="flex items-center gap-3 pt-3">
               <button onClick={onNext} className={btnPrimary}>
-                Continua: calcola la pianificazione →
+                {t("composer.continue")}
               </button>
             </div>
           )}
@@ -311,18 +314,16 @@ export default function Composer({ dsId, onChanged, onNext }) {
         {/* Catalogo laterale: da template a regola in un click */}
         <aside className="space-y-4">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">
-            Aggiungi dal catalogo
+            {t("composer.add_from_catalog")}
           </h3>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cerca una regola…"
+            placeholder={t("composer.search_placeholder")}
             className={`${inputCls} mt-0`}
           />
           {visible.length === 0 && (
-            <p className="text-sm text-muted">
-              Nessuna regola trovata: prova con un'altra parola.
-            </p>
+            <p className="text-sm text-muted">{t("composer.no_results")}</p>
           )}
           {families.map((f) => (
             <div key={f}>
@@ -331,7 +332,7 @@ export default function Composer({ dsId, onChanged, onNext }) {
                   FAMILY_COLORS[f] || "bg-slate-100 text-slate-600"
                 }`}
               >
-                {FAMILY_LABELS[f] || f}
+                {familyLabel(t, f)}
               </p>
               <div className="space-y-1.5">
                 {visible
@@ -354,16 +355,14 @@ export default function Composer({ dsId, onChanged, onNext }) {
               </div>
             </div>
           ))}
-          <Hint title="Obbligo o preferenza?">
+          <Hint title={t("composer.hint_title")}>
             <p>
-              <b className="text-paper">Obbligo</b>: regola non negoziabile (es.
-              riposo minimo per legge). Troppe regole obbligatorie in conflitto ={" "}
-              nessuna soluzione.
+              <b className="text-paper">{t("composer.hint_hard_term")}</b>
+              {t("composer.hint_hard_text")}
             </p>
             <p>
-              <b className="text-paper">Preferenza</b>: desiderata (es. equità
-              delle notti). Il motore la viola solo se serve, pagando il peso che
-              hai scelto.
+              <b className="text-paper">{t("composer.hint_soft_term")}</b>
+              {t("composer.hint_soft_text")}
             </p>
           </Hint>
         </aside>

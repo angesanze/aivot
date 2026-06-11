@@ -12,6 +12,8 @@ import threading
 
 import requests
 
+from config.translations import tr
+
 logger = logging.getLogger(__name__)
 
 BREVO_API = "https://api.brevo.com/v3/smtp/email"
@@ -79,33 +81,38 @@ def send_welcome(user):
     html = f"""
     <div style="{_STYLE}">
       <p><span style="{_BADGE}">A</span></p>
-      <h2 style="margin:18px 0 6px">Benvenuto su AIVOT, {name}!</h2>
-      <p>Il tuo account è pronto. Da oggi hai un'area personale dove
-      progetti, regole e pianificazioni restano tuoi: il motore fa i conti,
-      tu decidi i vincoli.</p>
+      <h2 style="margin:18px 0 6px">{tr("Benvenuto su AIVOT, {name}!", name=name)}</h2>
+      <p>{tr("Il tuo account è pronto. Da oggi hai un'area personale dove "
+             "progetti, regole e pianificazioni restano tuoi: il motore fa "
+             "i conti, tu decidi i vincoli.")}</p>
       <p style="background:#f4f5f7;border-radius:10px;padding:12px 16px">
-        Il tuo nome utente è <b>{user.username}</b><br/>
-        La password è quella che hai scelto alla registrazione: se la
-        dimentichi, usa "Password dimenticata?" nella pagina di accesso.
+        {tr("Il tuo nome utente è")} <b>{user.username}</b><br/>
+        {tr('La password è quella che hai scelto alla registrazione: se la '
+            'dimentichi, usa "Password dimenticata?" nella pagina di '
+            'accesso.')}
       </p>
-      <p><a style="{_BTN}" href="{cfg['frontend_url']}">Entra in AIVOT</a></p>
-      <p style="color:#6b7280;font-size:13px">Ogni vincolo, una soluzione.</p>
+      <p><a style="{_BTN}" href="{cfg['frontend_url']}">{tr("Entra in AIVOT")}</a></p>
+      <p style="color:#6b7280;font-size:13px">{tr("Ogni vincolo, una soluzione.")}</p>
     </div>"""
-    send_raw(user.email, name, "Benvenuto su AIVOT 🎉", html, cfg=cfg)
+    send_raw(user.email, name, tr("Benvenuto su AIVOT 🎉"), html, cfg=cfg)
 
 
 def send_password_reset(user, reset_url):
     cfg = _config()
     name = user.first_name or user.username
+    body = tr("Ciao {name}, abbiamo ricevuto una richiesta di reset per il "
+              "tuo account {username}. Se non sei stato tu, ignora questa "
+              "email: la tua password resta quella attuale.",
+              name=name, username=f"<b>{user.username}</b>")
     html = f"""
     <div style="{_STYLE}">
       <p><span style="{_BADGE}">A</span></p>
-      <h2 style="margin:18px 0 6px">Reimposta la tua password</h2>
-      <p>Ciao {name}, abbiamo ricevuto una richiesta di reset per il tuo
-      account <b>{user.username}</b>. Se non sei stato tu, ignora questa
-      email: la tua password resta quella attuale.</p>
-      <p><a style="{_BTN}" href="{reset_url}">Scegli una nuova password</a></p>
-      <p style="color:#6b7280;font-size:13px">Il link vale per un solo
-      utilizzo e scade automaticamente.</p>
+      <h2 style="margin:18px 0 6px">{tr("Reimposta la tua password")}</h2>
+      <p>{body}</p>
+      <p><a style="{_BTN}" href="{reset_url}">{tr("Scegli una nuova password")}</a></p>
+      <p style="color:#6b7280;font-size:13px">{tr("Il link vale per un solo "
+                                                  "utilizzo e scade "
+                                                  "automaticamente.")}</p>
     </div>"""
-    send_raw(user.email, name, "AIVOT — reimposta la password", html, cfg=cfg)
+    send_raw(user.email, name, tr("AIVOT — reimposta la password"), html,
+             cfg=cfg)
