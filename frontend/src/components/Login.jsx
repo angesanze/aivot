@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { api } from "../api";
+import { LANGS, useI18n, useT } from "../i18n.jsx";
 
 /* Schermata di accesso: login, registrazione completa, recupero password
    e Google Sign-In. Unica pagina visibile senza credenziali. */
@@ -14,6 +15,7 @@ const primaryBtn =
    server ha un client ID configurato. */
 function GoogleButton({ clientId, onAuth, onError }) {
   const ref = useRef(null);
+  const { lang, t } = useI18n();
 
   useEffect(() => {
     if (!clientId) return;
@@ -28,7 +30,7 @@ function GoogleButton({ clientId, onAuth, onError }) {
         size: "large",
         width: 320,
         text: "continue_with",
-        locale: "it",
+        locale: lang,
       });
     };
     if (window.google?.accounts?.id) {
@@ -40,14 +42,14 @@ function GoogleButton({ clientId, onAuth, onError }) {
     s.async = true;
     s.onload = init;
     document.head.appendChild(s);
-  }, [clientId]);
+  }, [clientId, lang]);
 
   if (!clientId) return null;
   return (
     <>
       <div className="flex items-center gap-3 text-xs text-slate-500">
         <span className="flex-1 h-px bg-white/10" />
-        oppure
+        {t("login.or")}
         <span className="flex-1 h-px bg-white/10" />
       </div>
       <div ref={ref} className="flex justify-center" />
@@ -55,7 +57,32 @@ function GoogleButton({ clientId, onAuth, onError }) {
   );
 }
 
+/* Cambio lingua compatto: due bottoncini IT/EN, l'attivo è evidenziato. */
+function LangSwitcher({ className = "" }) {
+  const { lang, setLang } = useI18n();
+  return (
+    <div className={`flex items-center gap-1 ${className}`}>
+      {LANGS.map((l) => (
+        <button
+          key={l.code}
+          type="button"
+          onClick={() => setLang(l.code)}
+          title={l.label}
+          className={`px-2 py-1 rounded-lg text-[11px] font-semibold tracking-wide transition-colors ${
+            lang === l.code
+              ? "bg-white/10 text-white"
+              : "text-slate-500 hover:text-white"
+          }`}
+        >
+          {l.code.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function Login({ onAuth }) {
+  const t = useT();
   // login | register | forgot | reset
   const [mode, setMode] = useState(() =>
     new URLSearchParams(window.location.search).get("reset") ? "reset" : "login"
@@ -111,7 +138,7 @@ export default function Login({ onAuth }) {
     e.preventDefault();
     setError(null);
     if ((mode === "register" || mode === "reset") && form.password !== form.password2) {
-      setError("Le due password non coincidono.");
+      setError(t("login.password_mismatch"));
       return;
     }
     setBusy(true);
@@ -146,6 +173,9 @@ export default function Login({ onAuth }) {
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.15),transparent_60%)]">
       <div className="w-full max-w-sm space-y-8">
+        <div className="flex justify-end">
+          <LangSwitcher />
+        </div>
         <div className="flex flex-col items-center gap-3 text-center">
           <img
             src="/logo.svg"
@@ -157,7 +187,7 @@ export default function Login({ onAuth }) {
               AIVOT
             </h1>
             <p className="text-sm text-slate-400 mt-1">
-              Ogni vincolo, una soluzione — accedi alla tua area
+              {t("brand.tagline")} — {t("login.subtitle")}
             </p>
           </div>
         </div>
@@ -166,8 +196,8 @@ export default function Login({ onAuth }) {
           {(mode === "login" || mode === "register") && (
             <div className="flex text-sm font-semibold rounded-xl bg-white/5 p-1">
               {[
-                ["login", "Accedi"],
-                ["register", "Registrati"],
+                ["login", t("login.tab_login")],
+                ["register", t("login.tab_register")],
               ].map(([m, label]) => (
                 <button
                   key={m}
@@ -187,19 +217,17 @@ export default function Login({ onAuth }) {
 
           {mode === "forgot" && (
             <div>
-              <h2 className="text-white font-semibold">Password dimenticata?</h2>
+              <h2 className="text-white font-semibold">{t("login.forgot_title")}</h2>
               <p className="text-xs text-slate-400 mt-1">
-                Scrivi l'email con cui ti sei registrato: ti mandiamo il link
-                per sceglierne una nuova.
+                {t("login.forgot_text")}
               </p>
             </div>
           )}
           {mode === "reset" && (
             <div>
-              <h2 className="text-white font-semibold">Scegli la nuova password</h2>
+              <h2 className="text-white font-semibold">{t("login.reset_title")}</h2>
               <p className="text-xs text-slate-400 mt-1">
-                Il link è valido per un solo utilizzo: dopo il salvataggio
-                entrerai direttamente nella tua area.
+                {t("login.reset_text")}
               </p>
             </div>
           )}
@@ -211,14 +239,14 @@ export default function Login({ onAuth }) {
                   autoFocus
                   value={form.first_name}
                   onChange={set("first_name")}
-                  placeholder="Nome"
+                  placeholder={t("login.first_name")}
                   autoComplete="given-name"
                   className={field}
                 />
                 <input
                   value={form.last_name}
                   onChange={set("last_name")}
-                  placeholder="Cognome"
+                  placeholder={t("login.last_name")}
                   autoComplete="family-name"
                   className={field}
                 />
@@ -230,7 +258,7 @@ export default function Login({ onAuth }) {
                 type="email"
                 value={form.email}
                 onChange={set("email")}
-                placeholder="Email"
+                placeholder={t("login.email")}
                 autoComplete="email"
                 className={field}
               />
@@ -241,7 +269,7 @@ export default function Login({ onAuth }) {
                 autoFocus={mode === "login"}
                 value={form.username}
                 onChange={set("username")}
-                placeholder="Nome utente"
+                placeholder={t("login.username")}
                 autoComplete="username"
                 className={field}
               />
@@ -253,7 +281,7 @@ export default function Login({ onAuth }) {
                 value={form.password}
                 onChange={set("password")}
                 placeholder={
-                  mode === "login" ? "Password" : "Password (min 8 caratteri)"
+                  mode === "login" ? t("login.password") : t("login.password_min")
                 }
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
                 className={field}
@@ -265,7 +293,7 @@ export default function Login({ onAuth }) {
                 type="password"
                 value={form.password2}
                 onChange={set("password2")}
-                placeholder="Conferma password"
+                placeholder={t("login.password_confirm")}
                 autoComplete="new-password"
                 className={field}
               />
@@ -279,11 +307,7 @@ export default function Login({ onAuth }) {
                   onChange={set("terms")}
                   className="mt-0.5 accent-emerald-500"
                 />
-                <span>
-                  Accetto le condizioni d'uso e l'informativa privacy.
-                  L'email serve per le comunicazioni di servizio (benvenuto,
-                  recupero password).
-                </span>
+                <span>{t("login.terms")}</span>
               </label>
             )}
 
@@ -294,7 +318,7 @@ export default function Login({ onAuth }) {
                   onClick={() => switchMode("forgot")}
                   className="text-xs text-slate-400 hover:text-emerald-300 transition-colors"
                 >
-                  Password dimenticata?
+                  {t("login.forgot_title")}
                 </button>
               </div>
             )}
@@ -304,13 +328,15 @@ export default function Login({ onAuth }) {
 
             <button type="submit" disabled={busy || !canSubmit} className={primaryBtn}>
               {busy
-                ? "Un attimo…"
-                : {
-                    login: "Accedi",
-                    register: "Crea il tuo account",
-                    forgot: "Inviami il link di reset",
-                    reset: "Salva la nuova password",
-                  }[mode]}
+                ? t("login.busy")
+                : t(
+                    {
+                      login: "login.tab_login",
+                      register: "login.submit_register",
+                      forgot: "login.submit_forgot",
+                      reset: "login.submit_reset",
+                    }[mode]
+                  )}
             </button>
           </form>
 
@@ -328,7 +354,7 @@ export default function Login({ onAuth }) {
               onClick={() => switchMode("login")}
               className="text-xs text-slate-400 hover:text-white transition-colors"
             >
-              ← Torna all'accesso
+              {t("login.back")}
             </button>
           )}
         </div>

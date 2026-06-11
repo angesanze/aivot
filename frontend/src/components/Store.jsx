@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import { api } from "../api";
 import { EmptyState, Hint, ConfirmButton, inputCls, btnPrimary, btnGhost } from "./ui.jsx";
 import { SearchIcon } from "./icons.jsx";
+import { useT, useLocale } from "../i18n.jsx";
 
 /* Store condiviso: ricette di regole pubblicate dagli utenti.
    Si pubblica dal progetto attivo, si installa nel progetto attivo. */
 
 function PublishPanel({ dataset, onPublished, onCancel }) {
+  const t = useT();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
@@ -31,42 +33,42 @@ function PublishPanel({ dataset, onPublished, onCancel }) {
   return (
     <section className="bg-white/80 backdrop-blur border border-emerald-300 ring-2 ring-emerald-500/15 rounded-2xl p-4 space-y-3">
       <h3 className="font-medium">
-        Pubblica le regole di «{dataset.name}»
+        {t("store.publish_title", { name: dataset.name })}
       </h3>
       <p className="text-sm text-muted">
-        Verranno condivise le {dataset.constraints_count} regole attive del
-        progetto (senza dati: niente persone né turni). Le regole legate a
-        persone specifiche vengono escluse automaticamente.
+        {t("store.publish_desc", { count: dataset.constraints_count })}
       </p>
       <label className="block text-sm">
-        <span className="font-semibold text-slate-700">Titolo *</span>
+        <span className="font-semibold text-slate-700">
+          {t("store.field_title")}
+        </span>
         <input
           autoFocus
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Es. Turnistica reparto ospedaliero H24"
+          placeholder={t("store.title_placeholder")}
           className={inputCls}
         />
       </label>
       <label className="block text-sm">
         <span className="font-semibold text-slate-700">
-          Descrizione — aiuta gli altri a capire quando usarla
+          {t("store.field_description")}
         </span>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
-          placeholder="Per chi è? Che problemi risolve? Cosa va adattato?"
+          placeholder={t("store.description_placeholder")}
           className={inputCls}
         />
       </label>
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
         <button onClick={publish} disabled={busy || !title.trim()} className={btnPrimary}>
-          {busy ? "Pubblicazione…" : "Pubblica nello store"}
+          {busy ? t("store.publishing") : t("store.publish_submit")}
         </button>
         <button onClick={onCancel} className={btnGhost}>
-          Annulla
+          {t("common.cancel")}
         </button>
       </div>
     </section>
@@ -74,6 +76,8 @@ function PublishPanel({ dataset, onPublished, onCancel }) {
 }
 
 function RecipeCard({ item, dataset, onInstalled, onDeleted }) {
+  const t = useT();
+  const locale = useLocale();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null);
   const [error, setError] = useState(null);
@@ -97,13 +101,17 @@ function RecipeCard({ item, dataset, onInstalled, onDeleted }) {
       <div className="flex items-baseline justify-between gap-2">
         <h4 className="font-semibold">{item.title}</h4>
         <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 shrink-0">
-          {item.rules_count} regole
+          {item.rules_count === 1
+            ? t("store.rules_count_one")
+            : t("store.rules_count_other", { n: item.rules_count })}
         </span>
       </div>
       <p className="text-xs text-muted">
-        di <b>{item.author_username}</b> ·{" "}
-        {new Date(item.created_at).toLocaleDateString("it-IT")} ·{" "}
-        {item.installs} installazioni
+        {t("store.by")} <b>{item.author_username}</b> ·{" "}
+        {new Date(item.created_at).toLocaleDateString(locale)} ·{" "}
+        {item.installs === 1
+          ? t("store.installs_one")
+          : t("store.installs_other", { n: item.installs })}
       </p>
       {item.description && (
         <p className="text-sm text-muted">{item.description}</p>
@@ -114,16 +122,18 @@ function RecipeCard({ item, dataset, onInstalled, onDeleted }) {
       <div className="flex items-center gap-3 mt-auto pt-2">
         {done != null ? (
           <span className="text-sm text-op font-medium">
-            ✓ {done} regole aggiunte a «{dataset?.name}»
+            {done === 1
+              ? t("store.installed_one", { name: dataset?.name })
+              : t("store.installed_other", { n: done, name: dataset?.name })}
           </span>
         ) : (
           <button
             onClick={install}
             disabled={busy || !dataset}
-            title={!dataset ? "Prima apri un progetto" : undefined}
+            title={!dataset ? t("store.open_project_first") : undefined}
             className="text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-500 rounded-lg px-4 py-1.5 disabled:opacity-40"
           >
-            {busy ? "Installazione…" : "Installa nel progetto"}
+            {busy ? t("store.installing") : t("store.install")}
           </button>
         )}
         {error && <span className="text-xs text-danger">{error}</span>}
@@ -134,10 +144,10 @@ function RecipeCard({ item, dataset, onInstalled, onDeleted }) {
                 await api.deleteRecipe(item.id);
                 onDeleted();
               }}
-              confirmLabel="Ritirare dallo store?"
+              confirmLabel={t("store.withdraw_confirm")}
               className="text-xs font-medium text-danger/70 hover:text-danger"
             >
-              ritira
+              {t("store.withdraw")}
             </ConfirmButton>
           </span>
         )}
@@ -147,6 +157,7 @@ function RecipeCard({ item, dataset, onInstalled, onDeleted }) {
 }
 
 export default function Store({ dataset, onGoTo }) {
+  const t = useT();
   const [items, setItems] = useState([]);
   const [query, setQuery] = useState("");
   const [publishing, setPublishing] = useState(false);
@@ -169,12 +180,10 @@ export default function Store({ dataset, onGoTo }) {
     <div className="space-y-6">
       <header className="max-w-3xl">
         <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
-          Store delle ricette
+          {t("store.title")}
         </h2>
         <p className="text-muted text-[15px] mt-3 leading-relaxed">
-          Set di regole già rodati, pubblicati dalla community: installane
-          uno nel tuo progetto e adatta i valori, invece di partire da zero.
-          Quando le tue regole funzionano bene, ricambia: pubblicale qui.
+          {t("store.desc")}
         </p>
       </header>
 
@@ -186,7 +195,7 @@ export default function Store({ dataset, onGoTo }) {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cerca: ospedale, negozio, scuola…"
+            placeholder={t("store.search_placeholder")}
             className={`${inputCls} mt-0 pl-9`}
           />
         </label>
@@ -196,14 +205,14 @@ export default function Store({ dataset, onGoTo }) {
             disabled={!dataset || !dataset.constraints_count}
             title={
               !dataset
-                ? "Prima apri un progetto"
+                ? t("store.open_project_first")
                 : !dataset.constraints_count
-                  ? "Il progetto attivo non ha ancora regole"
+                  ? t("store.no_rules_title")
                   : undefined
             }
             className={`${btnPrimary} ml-auto`}
           >
-            ↑ Pubblica le regole del progetto
+            {t("store.publish_btn")}
           </button>
         )}
       </div>
@@ -221,15 +230,13 @@ export default function Store({ dataset, onGoTo }) {
 
       {error && (
         <p className="font-mono text-sm text-danger">
-          Store non raggiungibile: {error}
+          {t("store.error", { error })}
         </p>
       )}
 
       {items.length === 0 && !error ? (
         <EmptyState>
-          {query
-            ? "Nessuna ricetta corrisponde alla ricerca."
-            : "Lo store è ancora vuoto. Hai un set di regole che funziona? Sii il primo a pubblicarlo."}
+          {query ? t("store.empty_search") : t("store.empty")}
         </EmptyState>
       ) : (
         <div className="grid md:grid-cols-2 gap-3">
@@ -245,24 +252,23 @@ export default function Store({ dataset, onGoTo }) {
         </div>
       )}
 
-      <Hint title="Cosa contiene una ricetta?">
+      <Hint title={t("store.hint_title")}>
         <p>
-          Solo le <b>regole</b> (tipo, parametri, obbligo/preferenza, pesi):
-          mai persone, turni o dati del progetto d'origine. Le regole legate
-          a persone specifiche (indisponibilità, coppie…) vengono escluse
-          automaticamente alla pubblicazione.
+          {t("store.hint_p1_1")}
+          <b>{t("store.hint_p1_rules")}</b>
+          {t("store.hint_p1_2")}
         </p>
         <p>
-          Dopo l'installazione le regole sono tue: modificale, disattivale o
-          eliminale dal passo{" "}
+          {t("store.hint_p2_1")}
           <button
             onClick={() => onGoTo("rules")}
             className="text-op underline underline-offset-2"
           >
-            Regole
+            {t("store.hint_p2_rules_link")}
           </button>
-          . Con la regola <b>«Su misura»</b> del catalogo puoi anche
-          costruire vincoli nuovi e condividerli qui.
+          {t("store.hint_p2_2")}
+          <b>{t("store.hint_p2_custom")}</b>
+          {t("store.hint_p2_3")}
         </p>
       </Hint>
     </div>

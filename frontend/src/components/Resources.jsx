@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { StepHeader, Hint, Field, EmptyState, inputCls, btnPrimary, btnGhost } from "./ui.jsx";
+import { useT } from "../i18n.jsx";
 
 /* Import massivo da Excel/CSV: bottone che apre il file picker, esito
    inline, modello scaricabile per partire col formato giusto. */
 function ImportBox({ dsId, onImported }) {
+  const t = useT();
   const fileRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
@@ -29,7 +31,7 @@ function ImportBox({ dsId, onImported }) {
   };
 
   const downloadTemplate = () => {
-    const csv = "Nome;Competenze\nAnna Rossi;infermiere, senior\nBruno Bianchi;infermiere\n";
+    const csv = `${t("people.import_csv_header")}\nAnna Rossi;infermiere, senior\nBruno Bianchi;infermiere\n`;
     const url = URL.createObjectURL(
       new Blob([csv], { type: "text/csv;charset=utf-8" })
     );
@@ -42,11 +44,8 @@ function ImportBox({ dsId, onImported }) {
 
   return (
     <section className="bg-white/70 backdrop-blur border border-slate-200/70 rounded-2xl shadow-[0_4px_20px_rgba(15,23,42,0.06)] p-4 space-y-3">
-      <h3 className="font-medium">Importa da Excel o CSV</h3>
-      <p className="text-sm text-muted">
-        Prima colonna il nome, seconda le competenze (separate da virgola).
-        L'intestazione è facoltativa.
-      </p>
+      <h3 className="font-medium">{t("people.import_title")}</h3>
+      <p className="text-sm text-muted">{t("people.import_desc")}</p>
       <input
         ref={fileRef}
         type="file"
@@ -60,20 +59,22 @@ function ImportBox({ dsId, onImported }) {
           disabled={busy}
           className={btnPrimary}
         >
-          {busy ? "Importazione…" : "↑ Scegli il file"}
+          {busy ? t("people.import_busy") : t("people.import_pick")}
         </button>
         <button
           onClick={downloadTemplate}
           className="text-xs font-medium text-op underline underline-offset-2"
         >
-          scarica il modello
+          {t("people.import_template")}
         </button>
       </div>
       {result && (
         <p className="text-sm text-op font-medium">
-          ✓ {result.created} persone importate
+          {result.created === 1
+            ? t("people.import_done_one")
+            : t("people.import_done_many", { n: result.created })}
           {result.skipped_rows.length > 0 &&
-            ` — righe saltate (senza nome): ${result.skipped_rows.join(", ")}`}
+            ` — ${t("people.import_skipped", { rows: result.skipped_rows.join(", ") })}`}
         </p>
       )}
       {error && <p className="text-sm text-danger">{error}</p>}
@@ -89,6 +90,7 @@ const parseSkills = (text) =>
 
 /* Riga della tabella: in lettura mostra, in modifica diventa un mini-form. */
 function ResourceRow({ r, onSaved, onDeleted }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(r.name);
   const [skills, setSkills] = useState(r.skills.join(", "));
@@ -116,7 +118,7 @@ function ResourceRow({ r, onSaved, onDeleted }) {
           <input
             value={skills}
             onChange={(e) => setSkills(e.target.value)}
-            placeholder="es. infermiere, senior"
+            placeholder={t("people.skills_placeholder")}
             className="w-full bg-white border border-line rounded px-2 py-1 font-mono text-xs focus:outline-none focus:border-emerald-500"
           />
         </td>
@@ -126,13 +128,13 @@ function ResourceRow({ r, onSaved, onDeleted }) {
             disabled={!name.trim()}
             className="text-xs font-medium text-op hover:underline mr-3"
           >
-            salva
+            {t("people.save")}
           </button>
           <button
             onClick={() => setEditing(false)}
             className="text-xs font-medium text-muted hover:text-paper"
           >
-            annulla
+            {t("people.cancel")}
           </button>
         </td>
       </tr>
@@ -149,13 +151,13 @@ function ResourceRow({ r, onSaved, onDeleted }) {
           onClick={() => setEditing(true)}
           className="text-xs font-medium text-muted hover:text-paper mr-3"
         >
-          modifica
+          {t("common.edit")}
         </button>
         <button
           onClick={onDeleted}
           className="text-xs font-medium text-danger/70 hover:text-danger"
         >
-          elimina
+          {t("common.delete")}
         </button>
       </td>
     </tr>
@@ -163,6 +165,7 @@ function ResourceRow({ r, onSaved, onDeleted }) {
 }
 
 export default function Resources({ dsId, onChanged, onNext }) {
+  const t = useT();
   const [resources, setResources] = useState([]);
   const [names, setNames] = useState("");
   const [skills, setSkills] = useState("");
@@ -202,28 +205,23 @@ export default function Resources({ dsId, onChanged, onNext }) {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <StepHeader step={2} title="Inserisci le persone">
-        Chi può essere assegnato ai turni? Aggiungi le persone una per riga.
-        Le competenze servono alle regole di copertura (es. "almeno un senior
-        di notte"): se non ti servono, puoi lasciarle vuote.
+      <StepHeader step={2} title={t("people.title")}>
+        {t("people.desc")}
       </StepHeader>
 
       <div className="grid lg:grid-cols-[1fr_320px] gap-6 items-start">
         <section>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">
-            Persone nel progetto · {resources.length}
+            {t("people.in_project", { n: resources.length })}
           </h3>
           {resources.length === 0 ? (
-            <EmptyState>
-              Nessuna persona ancora. Usa il modulo a fianco: scrivi i nomi,
-              uno per riga, e premi "Aggiungi".
-            </EmptyState>
+            <EmptyState>{t("people.empty")}</EmptyState>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-muted font-mono text-xs border-b border-line">
-                  <th className="py-2 pr-4 font-normal">Nome</th>
-                  <th className="py-2 pr-4 font-normal">Competenze</th>
+                  <th className="py-2 pr-4 font-normal">{t("people.col_name")}</th>
+                  <th className="py-2 pr-4 font-normal">{t("people.col_skills")}</th>
                   <th className="py-2 font-normal" />
                 </tr>
               </thead>
@@ -243,41 +241,41 @@ export default function Resources({ dsId, onChanged, onNext }) {
 
         <aside className="space-y-4">
           <section className="bg-white/70 backdrop-blur border border-slate-200/70 rounded-2xl shadow-[0_4px_20px_rgba(15,23,42,0.06)] p-4 space-y-3">
-            <h3 className="font-medium">Aggiungi persone</h3>
-            <Field label="Nomi (uno per riga)">
+            <h3 className="font-medium">{t("people.add_title")}</h3>
+            <Field label={t("people.names_label")}>
               <textarea
                 value={names}
                 onChange={(e) => setNames(e.target.value)}
                 rows={5}
-                placeholder={"Anna Rossi\nBruno Bianchi\nCarla Verdi"}
+                placeholder={t("people.names_placeholder")}
                 className={inputCls}
               />
             </Field>
             <Field
-              label="Competenze comuni (facoltative)"
-              hint="Separate da virgola, applicate a tutte le persone inserite. Potrai modificarle singolarmente dopo."
+              label={t("people.common_skills_label")}
+              hint={t("people.common_skills_hint")}
             >
               <input
                 value={skills}
                 onChange={(e) => setSkills(e.target.value)}
-                placeholder="es. infermiere, senior"
+                placeholder={t("people.skills_placeholder")}
                 className={inputCls}
               />
             </Field>
             <button onClick={add} disabled={busy || !names.trim()} className={btnPrimary}>
-              Aggiungi
+              {t("people.add")}
             </button>
           </section>
 
           <ImportBox dsId={dsId} onImported={changed} />
 
-          <Hint title="A cosa servono le competenze?">
+          <Hint title={t("people.skills_hint_title")}>
             <p>
-              Una competenza è un'etichetta libera (es.{" "}
-              <code className="font-mono text-op">senior</code>,{" "}
-              <code className="font-mono text-op">rianimazione</code>). Le
-              regole di copertura possono richiederla: "almeno 1 persona con
-              competenza <i>senior</i> per ogni turno di notte".
+              {t("people.skills_hint_1")}{" "}
+              <code className="font-mono text-op">{t("people.skills_hint_code1")}</code>,{" "}
+              <code className="font-mono text-op">{t("people.skills_hint_code2")}</code>
+              {t("people.skills_hint_2")} <i>senior</i>{" "}
+              {t("people.skills_hint_3")}
             </p>
           </Hint>
         </aside>
@@ -286,11 +284,9 @@ export default function Resources({ dsId, onChanged, onNext }) {
       {resources.length > 0 && (
         <div className="flex items-center gap-3 pt-2 border-t border-line">
           <button onClick={onNext} className={btnPrimary}>
-            Continua: definisci i turni →
+            {t("people.continue")}
           </button>
-          <span className="text-muted text-sm">
-            Potrai sempre tornare qui per aggiungere o modificare persone.
-          </span>
+          <span className="text-muted text-sm">{t("people.footer_note")}</span>
         </div>
       )}
     </div>

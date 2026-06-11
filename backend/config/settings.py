@@ -2,9 +2,12 @@ import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-change-me")
-DEBUG = os.environ.get("DEBUG", "1") == "1"
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
+
+# `or`: una variabile presente ma VUOTA (es. `${SECRET_KEY:-}` nel
+# compose senza .env) deve ricadere sul default come se mancasse.
+SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-only-change-me"
+DEBUG = (os.environ.get("DEBUG") or "1") == "1"
+ALLOWED_HOSTS = (os.environ.get("ALLOWED_HOSTS") or "*").split(",")
 
 # Fuori da DEBUG la chiave di sviluppo non è ammessa: meglio non partire
 # che partire firmando sessioni con un segreto pubblico.
@@ -33,6 +36,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",  # statici admin sotto gunicorn
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",  # lingua da Accept-Language
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -107,7 +111,8 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "INFO"},
 }
 
-LANGUAGE_CODE = "it-it"
+LANGUAGE_CODE = "it"
+LANGUAGES = [("it", "Italiano"), ("en", "English")]
 TIME_ZONE = "Europe/Rome"
 USE_TZ = True
 STATIC_URL = "static/"
@@ -118,12 +123,12 @@ SOLVER_TIME_LIMIT_DEFAULT = int(os.environ.get("SOLVER_TIME_LIMIT", "30"))
 
 # --- Integrazioni esterne ------------------------------------------------
 # Email transazionali (Brevo) — la chiave vive SOLO nell'ambiente
-BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
-BREVO_SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "")
-BREVO_SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "AIVOT")
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY") or ""
+BREVO_SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL") or ""
+BREVO_SENDER_NAME = os.environ.get("BREVO_SENDER_NAME") or "AIVOT"
 
 # Google Sign-In (OAuth client ID, da Google Cloud Console)
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID") or ""
 
 # URL pubblico del frontend, usato nei link delle email (reset password)
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = os.environ.get("FRONTEND_URL") or "http://localhost:5173"

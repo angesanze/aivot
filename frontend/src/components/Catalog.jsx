@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import { FAMILY_LABELS, FAMILY_COLORS, EmptyState, inputCls } from "./ui.jsx";
+import { familyLabel, FAMILY_COLORS, EmptyState, inputCls } from "./ui.jsx";
 import { SearchIcon } from "./icons.jsx";
+import { useT } from "../i18n.jsx";
 
 /* Ordine di presentazione delle famiglie: dalle regole strutturali
    alle personalizzazioni individuali. */
@@ -26,34 +27,37 @@ const matches = (t, q) => {
     .every((w) => hay.includes(w));
 };
 
-function TemplateCard({ t }) {
+function TemplateCard({ t: tpl }) {
+  const t = useT();
   return (
     <article className="bg-white/70 backdrop-blur border border-slate-200/70 rounded-2xl shadow-[0_4px_20px_rgba(15,23,42,0.06)] p-4 hover:shadow-[0_4px_24px_rgba(15,23,42,0.1)] hover:border-emerald-300 transition-all">
       <div className="flex items-baseline justify-between gap-2">
-        <h4 className="font-semibold">{t.name}</h4>
+        <h4 className="font-semibold">{tpl.name}</h4>
         <span
           className={`text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
-            t.default_nature === "hard"
+            tpl.default_nature === "hard"
               ? "bg-slate-900 text-white"
               : "bg-emerald-100 text-emerald-700"
           }`}
-          title="Natura di default: modificabile quando la aggiungi"
+          title={t("catalog.nature_title")}
         >
-          {t.default_nature === "hard" ? "obbligo" : "preferenza"}
+          {tpl.default_nature === "hard"
+            ? t("catalog.nature_hard")
+            : t("catalog.nature_soft")}
         </span>
       </div>
       <span
         className={`inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full mt-1.5 ${
-          FAMILY_COLORS[t.family] || "bg-slate-100 text-slate-600"
+          FAMILY_COLORS[tpl.family] || "bg-slate-100 text-slate-600"
         }`}
       >
-        {FAMILY_LABELS[t.family] || t.family}
+        {familyLabel(t, tpl.family)}
       </span>
-      <p className="text-sm text-muted mt-2">{t.description}</p>
-      {t.param_schema.length > 0 && (
+      <p className="text-sm text-muted mt-2">{tpl.description}</p>
+      {tpl.param_schema.length > 0 && (
         <p className="text-xs text-muted mt-3">
-          <span className="font-semibold">Valori da impostare:</span>{" "}
-          {t.param_schema.map((p) => p.label || p.name).join(" · ")}
+          <span className="font-semibold">{t("catalog.params_label")}</span>{" "}
+          {tpl.param_schema.map((p) => p.label || p.name).join(" · ")}
         </p>
       )}
     </article>
@@ -61,6 +65,7 @@ function TemplateCard({ t }) {
 }
 
 export default function Catalog() {
+  const t = useT();
   const [templates, setTemplates] = useState([]);
   const [query, setQuery] = useState("");
   const [family, setFamily] = useState(null); // null = tutte
@@ -100,14 +105,10 @@ export default function Catalog() {
     <div className="space-y-6">
       <header className="max-w-3xl">
         <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
-          Catalogo delle regole
+          {t("catalog.title")}
         </h2>
         <p className="text-muted text-[15px] mt-3 leading-relaxed">
-          Tutte le regole disponibili: cerca per parola chiave o filtra per
-          famiglia. È una pagina di consultazione: per usarne una, vai al
-          passo 4 ("Regole") e aggiungila al tuo progetto impostandone i
-          valori. Ogni regola nasce come obbligo o come preferenza, ma puoi
-          sempre cambiarla.
+          {t("catalog.desc")}
         </p>
       </header>
 
@@ -121,13 +122,15 @@ export default function Catalog() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cerca: notte, riposo, coppia, weekend…"
+            placeholder={t("catalog.search_placeholder")}
             className={`${inputCls} mt-0 pl-9`}
           />
         </label>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => setFamily(null)} className={chip(!family)}>
-            Tutte · {templates.filter((t) => matches(t, query)).length}
+            {t("catalog.all_chip", {
+              n: templates.filter((tpl) => matches(tpl, query)).length,
+            })}
           </button>
           {families.map((f) => (
             <button
@@ -135,19 +138,19 @@ export default function Catalog() {
               onClick={() => setFamily(family === f ? null : f)}
               className={chip(family === f)}
             >
-              {FAMILY_LABELS[f] || f} · {countBy(f)}
+              {familyLabel(t, f)} · {countBy(f)}
             </button>
           ))}
           <span className="w-px h-5 bg-slate-300 mx-1 hidden sm:block" />
           {[
-            ["hard", "Obblighi"],
-            ["soft", "Preferenze"],
+            ["hard", t("catalog.hard_chip")],
+            ["soft", t("catalog.soft_chip")],
           ].map(([n, label]) => (
             <button
               key={n}
               onClick={() => setNature(nature === n ? null : n)}
               className={chip(nature === n)}
-              title="Filtra per natura di default"
+              title={t("catalog.nature_filter_title")}
             >
               {label}
             </button>
@@ -157,16 +160,12 @@ export default function Catalog() {
 
       {error && (
         <p className="font-mono text-sm text-danger">
-          Catalogo non raggiungibile: {error}
+          {t("catalog.error", { error })}
         </p>
       )}
 
       {filtered.length === 0 ? (
-        <EmptyState>
-          Nessuna regola corrisponde a questa ricerca. Prova con un'altra
-          parola ("turno", "persona", "massimo"…) o togli i filtri. Se manca
-          la regola che ti serve, è il segnale che va aggiunta al catalogo.
-        </EmptyState>
+        <EmptyState>{t("catalog.empty")}</EmptyState>
       ) : family || query || nature ? (
         /* Con filtri attivi: lista piatta, ordinata per famiglia. */
         <div className="grid md:grid-cols-2 gap-3">
@@ -185,7 +184,7 @@ export default function Catalog() {
                 FAMILY_COLORS[f] || "bg-slate-100 text-slate-600"
               }`}
             >
-              {FAMILY_LABELS[f] || f}
+              {familyLabel(t, f)}
             </h3>
             <div className="grid md:grid-cols-2 gap-3">
               {filtered

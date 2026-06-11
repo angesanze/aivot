@@ -4,6 +4,7 @@ import {
   StepHeader, Hint, Field, EmptyState, ConfirmButton, codeColors,
   inputCls, btnPrimary, btnGhost,
 } from "./ui.jsx";
+import { useT, useLocale } from "../i18n.jsx";
 
 const pad = (n) => String(n).padStart(2, "0");
 const toISO = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -23,15 +24,19 @@ const eachDay = (from, to) => {
 };
 
 const DEFAULT_SHIFTS = [
-  { code: "M", label: "Mattino", start: "06:00", end: "14:00" },
-  { code: "P", label: "Pomeriggio", start: "14:00", end: "22:00" },
-  { code: "N", label: "Notte", start: "22:00", end: "06:00" },
+  { code: "M", labelKey: "slots.shift_morning", start: "06:00", end: "14:00" },
+  { code: "P", labelKey: "slots.shift_afternoon", start: "14:00", end: "22:00" },
+  { code: "N", labelKey: "slots.shift_night", start: "22:00", end: "06:00" },
 ];
 
 export default function Slots({ dsId, onChanged, onNext }) {
+  const t = useT();
+  const locale = useLocale();
   const today = toISO(new Date());
   const [slots, setSlots] = useState([]);
-  const [shifts, setShifts] = useState(DEFAULT_SHIFTS);
+  const [shifts, setShifts] = useState(() =>
+    DEFAULT_SHIFTS.map(({ labelKey, ...s }) => ({ ...s, label: t(labelKey) }))
+  );
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(addDays(today, 6));
   const [skipWeekend, setSkipWeekend] = useState(false);
@@ -91,21 +96,17 @@ export default function Slots({ dsId, onChanged, onNext }) {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <StepHeader step={3} title="Definisci i turni da coprire">
-        Un turno è una casella da riempire: un giorno più una fascia oraria
-        (es. "lunedì 7 luglio, Mattino"). Invece di inserirli a mano, descrivi
-        le fasce della giornata e il periodo: li generiamo noi per ogni giorno.
+      <StepHeader step={3} title={t("slots.title")}>
+        {t("slots.desc")}
       </StepHeader>
 
       <div className="grid lg:grid-cols-[360px_1fr] gap-6 items-start">
         <aside className="space-y-4">
           <section className="bg-white/70 backdrop-blur border border-slate-200/70 rounded-2xl shadow-[0_4px_20px_rgba(15,23,42,0.06)] p-4 space-y-4">
-            <h3 className="font-medium">Genera i turni</h3>
+            <h3 className="font-medium">{t("slots.generate_title")}</h3>
 
             <div>
-              <p className="text-sm text-muted mb-2">
-                1 · Le fasce della giornata
-              </p>
+              <p className="text-sm text-muted mb-2">{t("slots.step_bands")}</p>
               <div className="space-y-2">
                 {shifts.map((s, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -113,13 +114,13 @@ export default function Slots({ dsId, onChanged, onNext }) {
                       value={s.code}
                       onChange={(e) => setShift(i, "code", e.target.value)}
                       placeholder="M"
-                      title="Codice breve (compare nella griglia)"
+                      title={t("slots.code_title")}
                       className="w-12 bg-white border border-line rounded px-2 py-1.5 font-mono text-center focus:outline-none focus:border-emerald-500"
                     />
                     <input
                       value={s.label}
                       onChange={(e) => setShift(i, "label", e.target.value)}
-                      placeholder="Nome"
+                      placeholder={t("slots.label_placeholder")}
                       className="flex-1 min-w-0 bg-white border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-emerald-500"
                     />
                     <input
@@ -136,7 +137,7 @@ export default function Slots({ dsId, onChanged, onNext }) {
                     />
                     <button
                       onClick={() => setShifts(shifts.filter((_, j) => j !== i))}
-                      title="Rimuovi fascia"
+                      title={t("slots.remove_band")}
                       className="font-mono text-danger/70 hover:text-danger px-1"
                     >
                       ×
@@ -150,14 +151,14 @@ export default function Slots({ dsId, onChanged, onNext }) {
                 }
                 className="text-xs font-medium text-muted hover:text-paper mt-2"
               >
-                + aggiungi fascia
+                {t("slots.add_band")}
               </button>
             </div>
 
             <div>
-              <p className="text-sm text-muted mb-2">2 · Il periodo</p>
+              <p className="text-sm text-muted mb-2">{t("slots.step_period")}</p>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Dal">
+                <Field label={t("slots.from")}>
                   <input
                     type="date"
                     value={from}
@@ -165,7 +166,7 @@ export default function Slots({ dsId, onChanged, onNext }) {
                     className={inputCls}
                   />
                 </Field>
-                <Field label="Al (incluso)">
+                <Field label={t("slots.to")}>
                   <input
                     type="date"
                     value={to}
@@ -181,7 +182,7 @@ export default function Slots({ dsId, onChanged, onNext }) {
                   onChange={(e) => setSkipWeekend(e.target.checked)}
                   className="accent-[#059669]"
                 />
-                Salta sabato e domenica
+                {t("slots.skip_weekend")}
               </label>
             </div>
 
@@ -191,18 +192,21 @@ export default function Slots({ dsId, onChanged, onNext }) {
               className={btnPrimary}
             >
               {busy
-                ? "Creazione…"
-                : `Genera ${toCreate} turni (${days.length} giorni × ${validShifts.length} fasce)`}
+                ? t("slots.creating")
+                : t("slots.generate_btn", {
+                    n: toCreate,
+                    days: days.length,
+                    bands: validShifts.length,
+                  })}
             </button>
           </section>
 
-          <Hint title="E se i miei 'turni' sono aule o postazioni?">
+          <Hint title={t("slots.hint_title")}>
             <p>
-              Il codice della fascia è libero: al posto di M/P/N puoi usare{" "}
-              <code className="font-mono text-op">Aula-1</code>,{" "}
-              <code className="font-mono text-op">Sala-2</code>… Ogni
-              combinazione giorno + codice è una casella che il motore può
-              assegnare a una persona.
+              {t("slots.hint_1")}{" "}
+              <code className="font-mono text-op">{t("slots.hint_code1")}</code>,{" "}
+              <code className="font-mono text-op">{t("slots.hint_code2")}</code>
+              {t("slots.hint_2")}
             </p>
           </Hint>
         </aside>
@@ -210,31 +214,28 @@ export default function Slots({ dsId, onChanged, onNext }) {
         <section>
           <div className="flex items-baseline gap-4 mb-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Turni nel progetto · {slots.length}
+              {t("slots.in_project", { n: slots.length })}
             </h3>
             {slots.length > 0 && (
               <span className="ml-auto">
                 <ConfirmButton
                   onConfirm={clearAll}
-                  confirmLabel={`Eliminare tutti i ${slots.length} turni?`}
+                  confirmLabel={t("slots.clear_confirm", { n: slots.length })}
                   className="text-xs font-medium text-danger/70 hover:text-danger"
                 >
-                  svuota tutti
+                  {t("slots.clear_all")}
                 </ConfirmButton>
               </span>
             )}
           </div>
           {slots.length === 0 ? (
-            <EmptyState>
-              Nessun turno ancora. Imposta fasce e periodo nel modulo a fianco
-              e premi "Genera": creeremo un turno per ogni giorno × fascia.
-            </EmptyState>
+            <EmptyState>{t("slots.empty")}</EmptyState>
           ) : (
             <div className="space-y-3">
               {slotDays.map((day) => (
                 <div key={day} className="flex flex-wrap items-center gap-2">
                   <span className="font-mono text-xs text-muted w-28">
-                    {new Date(`${day}T12:00:00`).toLocaleDateString("it-IT", {
+                    {new Date(`${day}T12:00:00`).toLocaleDateString(locale, {
                       weekday: "short",
                       day: "2-digit",
                       month: "2-digit",
@@ -255,7 +256,7 @@ export default function Slots({ dsId, onChanged, onNext }) {
                       <button
                         onClick={() => removeSlot(s)}
                         className="text-danger/0 group-hover:text-danger/80"
-                        title="Elimina questo turno"
+                        title={t("slots.delete_one")}
                       >
                         ×
                       </button>
@@ -271,11 +272,9 @@ export default function Slots({ dsId, onChanged, onNext }) {
       {slots.length > 0 && (
         <div className="flex items-center gap-3 pt-2 border-t border-line">
           <button onClick={onNext} className={btnPrimary}>
-            Continua: imposta le regole →
+            {t("slots.continue")}
           </button>
-          <span className="text-muted text-sm">
-            Passa sopra un turno con il mouse per eliminarlo singolarmente.
-          </span>
+          <span className="text-muted text-sm">{t("slots.footer_note")}</span>
         </div>
       )}
     </div>

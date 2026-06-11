@@ -3,11 +3,13 @@ import { api } from "../api";
 import { useDatasetData } from "../hooks/useDatasetData.js";
 import { StepHeader, Hint, EmptyState, btnPrimary } from "./ui.jsx";
 import RunCard from "./RunCard.jsx";
+import { useT } from "../i18n.jsx";
 
 /* Quante run recenti mostrare qui: lo storico completo vive nell'archivio. */
 const RECENT = 3;
 
 export default function Runs({ dsId, dataset, onGoTo }) {
+  const t = useT();
   const { resources, slots, runs, error: loadError, refresh } =
     useDatasetData(dsId, { withRuns: true });
   const [timeLimit, setTimeLimit] = useState(30);
@@ -17,9 +19,9 @@ export default function Runs({ dsId, dataset, onGoTo }) {
 
   const missing = [];
   if (resources.length === 0)
-    missing.push({ step: "people", label: "non ci sono persone (passo 2)" });
+    missing.push({ step: "people", label: t("runs.missing_people") });
   if (slots.length === 0)
-    missing.push({ step: "slots", label: "non ci sono turni da coprire (passo 3)" });
+    missing.push({ step: "slots", label: t("runs.missing_slots") });
   const noRules = (dataset?.constraints_count ?? 0) === 0;
 
   const solve = async () => {
@@ -38,17 +40,14 @@ export default function Runs({ dsId, dataset, onGoTo }) {
 
   return (
     <div className="space-y-6">
-      <StepHeader step={5} title="Calcola la pianificazione">
-        Il motore prova tutte le combinazioni persona–turno e restituisce la
-        tabella che rispetta gli obblighi violando il meno possibile le
-        preferenze. Qui vedi i calcoli più recenti; lo storico completo, con
-        nomi e gruppi, è nella sezione "Pianificazioni".
+      <StepHeader step={5} title={t("runs.step_title")}>
+        {t("runs.step_desc")}
       </StepHeader>
 
       {missing.length > 0 ? (
         <div className="bg-amber-50/80 backdrop-blur border border-amber-200 rounded-2xl p-4 space-y-2">
           <p className="text-warn text-sm font-medium">
-            Manca qualcosa prima di poter calcolare:
+            {t("runs.missing_intro")}
           </p>
           <ul className="text-sm text-muted list-disc ml-5">
             {missing.map((m) => (
@@ -58,7 +57,7 @@ export default function Runs({ dsId, dataset, onGoTo }) {
                   onClick={() => onGoTo(m.step)}
                   className="text-op hover:text-op-dark underline underline-offset-2"
                 >
-                  vai al passo
+                  {t("runs.go_to_step")}
                 </button>
               </li>
             ))}
@@ -67,13 +66,13 @@ export default function Runs({ dsId, dataset, onGoTo }) {
       ) : (
         <div className="flex flex-wrap items-center gap-4">
           <button onClick={solve} disabled={solving} className={btnPrimary}>
-            {solving ? "Calcolo in corso…" : "▶ Calcola pianificazione"}
+            {solving ? t("runs.solving") : `▶ ${t("runs.solve")}`}
           </button>
           <label
             className="text-sm text-muted"
-            title="Tempo massimo concesso al motore. Se scade, tiene la migliore soluzione trovata fin lì."
+            title={t("runs.time_limit_title")}
           >
-            tempo massimo{" "}
+            {t("runs.time_limit_before")}{" "}
             <input
               type="number"
               min="1"
@@ -81,16 +80,16 @@ export default function Runs({ dsId, dataset, onGoTo }) {
               onChange={(e) => setTimeLimit(Number(e.target.value))}
               className="w-16 bg-white/80 border border-slate-200 rounded-lg px-2 py-1 text-paper focus:outline-none focus:border-emerald-500"
             />{" "}
-            secondi
+            {t("runs.time_limit_after")}
           </label>
           {noRules && (
             <span className="text-warn text-sm">
-              Nessuna regola attiva: il risultato sarà una griglia qualsiasi.{" "}
+              {t("runs.no_rules")}{" "}
               <button
                 onClick={() => onGoTo("rules")}
                 className="text-op underline underline-offset-2"
               >
-                Aggiungi regole
+                {t("runs.add_rules")}
               </button>
             </span>
           )}
@@ -99,14 +98,14 @@ export default function Runs({ dsId, dataset, onGoTo }) {
 
       {error && (
         <p className="font-mono text-sm text-danger">
-          Errore durante il calcolo: {error}
+          {t("runs.solve_error", { msg: error })}
         </p>
       )}
       {loadError && (
         <p className="font-mono text-sm text-danger">
-          Errore nel caricamento dei dati: {loadError}{" "}
+          {t("runs.load_error", { msg: loadError })}{" "}
           <button onClick={refresh} className="underline underline-offset-2">
-            riprova
+            {t("common.retry")}
           </button>
         </p>
       )}
@@ -125,40 +124,36 @@ export default function Runs({ dsId, dataset, onGoTo }) {
 
       {runs.length > RECENT && (
         <p className="text-sm text-muted">
-          Altre {runs.length - RECENT} pianificazioni nello storico.{" "}
+          {t("runs.more", { n: runs.length - RECENT })}{" "}
           <button
             onClick={() => onGoTo("archive")}
             className="text-op underline underline-offset-2"
           >
-            Apri l'archivio
+            {t("runs.open_archive")}
           </button>
         </p>
       )}
 
       {runs.length === 0 && missing.length === 0 && (
-        <EmptyState>
-          Nessun calcolo ancora. Premi "Calcola pianificazione": il primo
-          risultato comparirà qui con la griglia persone × giorni.
-        </EmptyState>
+        <EmptyState>{t("runs.empty")}</EmptyState>
       )}
 
-      <Hint title="Come leggere gli esiti?">
+      <Hint title={t("runs.hint_title")}>
         <p>
-          <b className="text-op">Ottimale</b>: la soluzione migliore in
-          assoluto. <b className="text-op">Valida</b>: una buona soluzione,
-          forse non la migliore (poco tempo).{" "}
-          <b className="text-danger">Impossibile</b>: gli obblighi si
-          contraddicono — il motore ti dice quali.
+          <b className="text-op">{t("status.OPTIMAL.label")}</b>
+          {t("runs.hint1a")} <b className="text-op">{t("status.FEASIBLE.label")}</b>
+          {t("runs.hint1b")}{" "}
+          <b className="text-danger">{t("status.INFEASIBLE.label")}</b>
+          {t("runs.hint1c")}
         </p>
         <p>
-          La <b className="text-warn">penalità</b> misura le preferenze
-          sacrificate: 0 = tutte rispettate. Confronta le penalità tra calcoli
-          per capire se le tue modifiche migliorano le cose.
+          {t("runs.hint2_pre")} <b className="text-warn">{t("runs.hint2_bold")}</b>{" "}
+          {t("runs.hint2_post")}
         </p>
         <p>
-          Ogni calcolo finisce nella sezione{" "}
-          <b className="text-op">Pianificazioni</b>: lì puoi rinominarlo,
-          raggrupparlo ed eliminare quelli che non servono più.
+          {t("runs.hint3_pre")}{" "}
+          <b className="text-op">{t("archive.title")}</b>
+          {t("runs.hint3_post")}
         </p>
       </Hint>
     </div>

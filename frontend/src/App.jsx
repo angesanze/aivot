@@ -12,18 +12,44 @@ import Composer from "./components/Composer.jsx";
 import Runs from "./components/Runs.jsx";
 import Archive from "./components/Archive.jsx";
 import Catalog from "./components/Catalog.jsx";
+import { LANGS, useI18n, useT } from "./i18n.jsx";
 
 /* Percorso guidato: l'utente segue i passi in ordine la prima volta,
    poi salta liberamente. Il catalogo è consultazione, fuori dal flusso. */
 const STEPS = [
-  { id: "dataset", label: "Progetto", needsDs: false },
-  { id: "people", label: "Persone", needsDs: true, countKey: "resources_count" },
-  { id: "slots", label: "Turni", needsDs: true, countKey: "slots_count" },
-  { id: "rules", label: "Regole", needsDs: true, countKey: "constraints_count" },
-  { id: "solve", label: "Pianifica", needsDs: true },
+  { id: "dataset", labelKey: "app.step.dataset", needsDs: false },
+  { id: "people", labelKey: "app.step.people", needsDs: true, countKey: "resources_count" },
+  { id: "slots", labelKey: "app.step.slots", needsDs: true, countKey: "slots_count" },
+  { id: "rules", labelKey: "app.step.rules", needsDs: true, countKey: "constraints_count" },
+  { id: "solve", labelKey: "app.step.solve", needsDs: true },
 ];
 
+/* Cambio lingua compatto: due bottoncini IT/EN, l'attivo è evidenziato. */
+function LangSwitcher({ className = "" }) {
+  const { lang, setLang } = useI18n();
+  return (
+    <div className={`flex items-center gap-1 ${className}`}>
+      {LANGS.map((l) => (
+        <button
+          key={l.code}
+          type="button"
+          onClick={() => setLang(l.code)}
+          title={l.label}
+          className={`px-2 py-1 rounded-lg text-[11px] font-semibold tracking-wide transition-colors ${
+            lang === l.code
+              ? "bg-white/10 text-white"
+              : "text-slate-500 hover:text-white"
+          }`}
+        >
+          {l.code.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function Logo() {
+  const t = useT();
   return (
     <div className="flex items-center gap-3">
       <img
@@ -35,7 +61,7 @@ function Logo() {
         <p className="font-brand text-lg tracking-[0.14em] text-white">
           AIVOT
         </p>
-        <p className="text-[11px] text-slate-400">Ogni vincolo, una soluzione</p>
+        <p className="text-[11px] text-slate-400">{t("brand.tagline")}</p>
       </div>
     </div>
   );
@@ -44,11 +70,12 @@ function Logo() {
 /* Una voce del percorso: numero, spunta quando il passo è completo,
    contatore di cosa contiene. */
 function StepButton({ step, index, active, disabled, done, count, onClick, vertical }) {
+  const t = useT();
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      title={disabled ? "Prima crea o apri un progetto" : undefined}
+      title={disabled ? t("app.need_project") : undefined}
       className={`flex items-center gap-3 rounded-xl text-sm transition-all whitespace-nowrap ${
         vertical ? "w-full px-3 py-2.5" : "px-3 py-2"
       } ${
@@ -72,7 +99,7 @@ function StepButton({ step, index, active, disabled, done, count, onClick, verti
       >
         {done ? <CheckIcon /> : index + 1}
       </span>
-      {step.label}
+      {t(step.labelKey)}
       {count != null && count > 0 && (
         <span className="ml-auto text-[11px] font-semibold text-slate-200 bg-white/10 rounded-full px-2 py-0.5">
           {count}
@@ -83,6 +110,7 @@ function StepButton({ step, index, active, disabled, done, count, onClick, verti
 }
 
 export default function App() {
+  const t = useT();
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [datasets, setDatasets] = useState([]);
@@ -180,7 +208,7 @@ export default function App() {
     <button
       onClick={() => setStep("archive")}
       disabled={!dsId}
-      title={!dsId ? "Prima crea o apri un progetto" : undefined}
+      title={!dsId ? t("app.need_project") : undefined}
       className={`flex items-center gap-2.5 rounded-xl text-sm transition-colors ${extra} ${
         step === "archive"
           ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/10 text-white font-semibold ring-1 ring-emerald-400/30"
@@ -190,7 +218,7 @@ export default function App() {
       }`}
     >
       <FolderIcon />
-      Pianificazioni
+      {t("app.nav.archive")}
     </button>
   );
 
@@ -204,7 +232,7 @@ export default function App() {
       }`}
     >
       <BookIcon />
-      Catalogo regole
+      {t("app.nav.catalog")}
     </button>
   );
 
@@ -218,7 +246,7 @@ export default function App() {
       }`}
     >
       <StoreIcon />
-      Store ricette
+      {t("app.nav.store")}
     </button>
   );
 
@@ -230,14 +258,14 @@ export default function App() {
         {current && (
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2 px-1">
-              Progetto attivo
+              {t("app.active_project")}
             </p>
             {projectPicker}
           </div>
         )}
         <nav className="space-y-1.5">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2 px-1">
-            Percorso
+            {t("app.path")}
           </p>
           {stepButtons(true)}
         </nav>
@@ -245,10 +273,11 @@ export default function App() {
           {archiveBtn("w-full px-3 py-2.5")}
           {storeBtn("w-full px-3 py-2.5")}
           {catalogBtn("w-full px-3 py-2.5")}
+          <LangSwitcher className="px-3 pt-2" />
           <div className="flex items-center gap-2.5 px-3 pt-3">
             <button
               onClick={() => setStep("profile")}
-              title="Il tuo profilo: modifica dati e password"
+              title={t("app.profile_title")}
               className={`flex items-center gap-2.5 min-w-0 rounded-lg px-1.5 py-1 -ml-1.5 transition-colors ${
                 step === "profile"
                   ? "bg-white/10 text-white"
@@ -265,9 +294,9 @@ export default function App() {
             <button
               onClick={logout}
               className="ml-auto text-xs font-medium text-slate-500 hover:text-white transition-colors shrink-0"
-              title="Esci dal tuo account"
+              title={t("app.logout_title")}
             >
-              Esci
+              {t("app.logout")}
             </button>
           </div>
         </div>
@@ -281,7 +310,7 @@ export default function App() {
             <div className="ml-auto w-44">{projectPicker}</div>
             <button
               onClick={() => setStep("profile")}
-              title="Il tuo profilo"
+              title={t("app.profile_title_short")}
               className="flex items-center justify-center w-8 h-8 rounded-full bg-white/10 text-slate-200 text-xs font-bold uppercase shrink-0"
             >
               {user.username.slice(0, 2)}
@@ -289,10 +318,11 @@ export default function App() {
             <button
               onClick={logout}
               className="text-xs font-medium text-slate-500 hover:text-white transition-colors shrink-0"
-              title={`Esci (${user.username})`}
+              title={t("app.logout_title_user", { username: user.username })}
             >
-              Esci
+              {t("app.logout")}
             </button>
+            <LangSwitcher />
           </div>
           <nav className="flex gap-1 overflow-x-auto p-1 -mx-1">
             {stepButtons(false)}
@@ -306,7 +336,7 @@ export default function App() {
           {error && (
             <div className="bg-rose-50/80 backdrop-blur border border-rose-200 rounded-2xl px-4 py-3 mb-6">
               <p className="text-danger text-sm font-medium">
-                Server non raggiungibile: {error}
+                {t("app.server_unreachable", { error })}
               </p>
             </div>
           )}

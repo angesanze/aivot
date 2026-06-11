@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api";
 import { ScheduleGrid } from "./RunCard.jsx";
+import { useT, useLocale } from "../i18n.jsx";
 
 /* Pagina pubblica del widget (/embed/<token>): solo la griglia della
    pianificazione condivisa, pensata per vivere dentro un iframe. */
 export default function Embed({ token }) {
+  const t = useT();
+  const locale = useLocale();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
@@ -16,8 +19,7 @@ export default function Embed({ token }) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-6">
         <p className="text-sm text-slate-500 text-center">
-          Questo widget non è più disponibile: il proprietario potrebbe
-          averlo revocato.
+          {t("embed.unavailable")}
         </p>
       </div>
     );
@@ -29,8 +31,9 @@ export default function Embed({ token }) {
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h1 className="font-bold text-slate-900">{data.name}</h1>
         <span className="text-xs text-slate-400">
-          aggiornata al{" "}
-          {new Date(data.created_at).toLocaleDateString("it-IT")}
+          {t("embed.updated_at", {
+            date: new Date(data.created_at).toLocaleDateString(locale),
+          })}
         </span>
       </header>
 
@@ -48,8 +51,9 @@ export default function Embed({ token }) {
           className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-emerald-600 transition-colors"
         >
           <img src="/logo.svg" alt="" className="w-4 h-4 rounded" />
-          Creato con <span className="font-brand tracking-[0.12em]">AIVOT</span>{" "}
-          — ogni vincolo, una soluzione
+          {t("embed.created_with")}{" "}
+          <span className="font-brand tracking-[0.12em]">AIVOT</span> —{" "}
+          {t("brand.tagline")}
         </a>
       </footer>
     </div>

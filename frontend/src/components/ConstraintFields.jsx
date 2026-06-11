@@ -1,13 +1,15 @@
 import React from "react";
 import { Field, inputCls } from "./ui.jsx";
+import { useT } from "../i18n.jsx";
 
 /* Form generato dal param_schema del template: l'utente compone e
    parametrizza, non programma. */
 export function ParamFields({ schema, resources, values, onChange }) {
+  const t = useT();
   if (!schema.length)
     return (
       <p className="text-sm text-muted sm:col-span-2">
-        Questa regola non ha parametri: basta aggiungerla.
+        {t("fields.no_params")}
       </p>
     );
   return schema.map((p) => (
@@ -21,7 +23,7 @@ export function ParamFields({ schema, resources, values, onChange }) {
           className={inputCls}
         >
           <option value="">
-            {p.required ? "— scegli una persona —" : "— tutte le persone —"}
+            {p.required ? t("fields.choose_person") : t("fields.all_people")}
           </option>
           {resources.map((r) => (
             <option key={r.id} value={r.id}>
@@ -60,20 +62,17 @@ export function ParamFields({ schema, resources, values, onChange }) {
 
 /* Interruttore obbligo/preferenza, usato sia nell'editor sia in lista. */
 export function NatureToggle({ nature, onChange }) {
+  const t = useT();
   return (
     <div className="inline-flex text-[11px] font-bold rounded-full bg-slate-900/5 p-0.5">
       {[
-        ["hard", "OBBLIGO"],
-        ["soft", "PREFERENZA"],
+        ["hard", t("fields.hard")],
+        ["soft", t("fields.soft")],
       ].map(([n, label]) => (
         <button
           key={n}
           onClick={() => onChange(n)}
-          title={
-            n === "hard"
-              ? "Obbligo: la pianificazione DEVE rispettarla"
-              : "Preferenza: violarla costa una penalità, ma la pianificazione resta valida"
-          }
+          title={n === "hard" ? t("fields.hard_title") : t("fields.soft_title")}
           className={`px-3 py-1 tracking-wide rounded-full transition-all ${
             nature === n
               ? n === "hard"

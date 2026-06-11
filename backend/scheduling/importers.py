@@ -11,6 +11,8 @@ riconosciuta e saltata. Le righe senza nome vengono scartate e segnalate.
 import csv
 import io
 
+from config.translations import tr
+
 MAX_ROWS = 2000
 MAX_SIZE = 2 * 1024 * 1024  # 2 MB
 
@@ -33,8 +35,8 @@ def _rows_from_xlsx(data):
         from openpyxl import load_workbook
         wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
     except Exception:
-        raise ImportError_("File Excel non leggibile: salvalo come .xlsx "
-                           "e riprova.")
+        raise ImportError_(tr("File Excel non leggibile: salvalo come .xlsx "
+                              "e riprova."))
     sheet = wb.active
     return [["" if c is None else str(c) for c in row]
             for row in sheet.iter_rows(values_only=True)]
@@ -43,7 +45,7 @@ def _rows_from_xlsx(data):
 def parse_people_file(filename, data):
     """[(nome, [skills])] dal file, più la lista dei numeri di riga scartati."""
     if len(data) > MAX_SIZE:
-        raise ImportError_("File troppo grande (massimo 2 MB).")
+        raise ImportError_(tr("File troppo grande (massimo 2 MB)."))
 
     name = (filename or "").lower()
     if name.endswith(".xlsx"):
@@ -51,14 +53,14 @@ def parse_people_file(filename, data):
     elif name.endswith(".csv") or name.endswith(".txt"):
         rows = _rows_from_csv(data)
     elif name.endswith(".xls"):
-        raise ImportError_("Il vecchio formato .xls non è supportato: "
-                           "salva il file come .xlsx.")
+        raise ImportError_(tr("Il vecchio formato .xls non è supportato: "
+                              "salva il file come .xlsx."))
     else:
-        raise ImportError_("Formato non riconosciuto: carica un file "
-                           ".xlsx o .csv.")
+        raise ImportError_(tr("Formato non riconosciuto: carica un file "
+                              ".xlsx o .csv."))
 
     if len(rows) > MAX_ROWS + 1:
-        raise ImportError_(f"Troppe righe (massimo {MAX_ROWS}).")
+        raise ImportError_(tr("Troppe righe (massimo {n}).", n=MAX_ROWS))
 
     # Intestazione: se la prima cella sembra un titolo di colonna, si salta
     start = 0
@@ -78,6 +80,6 @@ def parse_people_file(filename, data):
         people.append((name, skills))
 
     if not people:
-        raise ImportError_("Nessuna persona trovata nel file: serve il nome "
-                           "nella prima colonna.")
+        raise ImportError_(tr("Nessuna persona trovata nel file: serve il "
+                              "nome nella prima colonna."))
     return people, skipped

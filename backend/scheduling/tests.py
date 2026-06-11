@@ -210,6 +210,31 @@ class SolveFlowTests(APITestCase):
         self.assertEqual(anon.get(f"/api/embed/runs/{token}/").status_code,
                          404)
 
+    def test_explanation_follows_request_language(self):
+        self.add_constraint(self.tpl_cap, {"max": 2})
+        r = self.client.post(f"/api/datasets/{self.ds}/solve/",
+                             {"time_limit": 10}, format="json",
+                             HTTP_ACCEPT_LANGUAGE="en")
+        self.assertIn("minimum coverage", r.data["explanation"])
+
+    def test_constraint_template_name_translated(self):
+        """Il nome del template denormalizzato sui vincoli attivi segue
+        la lingua della richiesta (bug: restava in italiano)."""
+        self.add_constraint(self.tpl_cov, {"min": 1})
+        r = self.client.get(f"/api/constraints/?dataset={self.ds}",
+                            HTTP_ACCEPT_LANGUAGE="en")
+        self.assertEqual(r.data[0]["template_name"], "Minimum coverage")
+        r = self.client.get(f"/api/constraints/?dataset={self.ds}")
+        self.assertEqual(r.data[0]["template_name"], "Copertura minima")
+
+    def test_catalog_served_translated(self):
+        r = self.client.get("/api/templates/", HTTP_ACCEPT_LANGUAGE="en")
+        tpl = next(t for t in r.data if t["code"] == "capacita_massima")
+        self.assertEqual(tpl["name"], "Maximum capacity")
+        r = self.client.get("/api/templates/")
+        tpl = next(t for t in r.data if t["code"] == "capacita_massima")
+        self.assertEqual(tpl["name"], "Capacità massima")
+
     def test_invalid_time_limit_is_clamped(self):
         self.add_constraint(self.tpl_cov, {"min": 1})
         r = self.client.post(f"/api/datasets/{self.ds}/solve/",
