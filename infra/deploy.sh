@@ -60,11 +60,14 @@ for v in ORG_ID BREVO_API_KEY BREVO_SENDER_EMAIL GOOGLE_CLIENT_ID; do
   eval "[ \"\${$v:-}\" = ' ' ] && $v=''" || true
 done
 
-# Terraform usa le credenziali utente di Cloud Shell via access token.
-# Dichiarazione e assegnazione separate: così un eventuale errore di gcloud
-# non viene mascherato dall'export (shellcheck SC2155).
-GOOGLE_OAUTH_ACCESS_TOKEN="$(gcloud auth print-access-token)"
-export GOOGLE_OAUTH_ACCESS_TOKEN
+# Autenticazione di Terraform: si usano le credenziali AMBIENTALI, che si
+# auto-rinnovano. NON un access token statico (scade in 1h e fa fallire le
+# operazioni lunghe, es. la creazione di Cloud SQL, con un 401 a metà).
+#   - in Cloud Shell: il metadata server fornisce il token dell'utente;
+#   - in CI: GOOGLE_APPLICATION_CREDENTIALS (impostata dal workflow).
+# Se in Cloud Shell il provider non trovasse credenziali, basta una volta:
+#   gcloud auth application-default login
+unset GOOGLE_OAUTH_ACCESS_TOKEN
 
 TF_ARGS=(
   -var "project_id=$PROJECT_ID"
