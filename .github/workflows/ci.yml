@@ -1,0 +1,135 @@
+# Controlli automatici a ogni pull request.
+#
+# Filosofia: veloce e mirato. Un job per area, attivato solo se quell'area
+# è cambiata (paths-filter), più due controlli di sicurezza che girano
+# sempre. Permessi minimi: questa CI non vede i segreti di deploy.
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch: {}
+
+# Nessun accesso in scrittura né ai segreti: solo lettura del codice.
+permissions:
+  contents: read
+
+# Un nuovo push sulla stessa PR annulla il run precedente.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Capisce quali aree toccare, così le PR su soli docs non sprecano minuti.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.f.outputs.backend }}
+      frontend: ${{ steps.f.outputs.frontend }}
+      infra: ${{ steps.f.outputs.infra }}
+      scripts: ${{ steps.f.outputs.scripts }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: f
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+            infra:
+              - 'infra/**'
+            scripts:
+              - 'infra/deploy.sh'
+              - 'backend/entrypoint.sh'
+
+  # Test Django + migrazioni mancanti + system check (su sqlite, il fallback
+  # ufficiale del progetto: niente servizio Postgres da avviare).
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r backend/requirements.txt
+      - name: Migrazioni mancanti e system check
+        working-directory: backend
+        run: |
+          python manage.py makemigrations --check --dry-run
+          python manage.py check
+      - name: Test
+        working-directory: backend
+        env:
+          DEBUG: "1"
+        run: python manage.py test
+
+  # Il build di Vite fallisce su import/sintassi rotti: rete di sicurezza FE.
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+
+  # Formattazione e validità dell'HCL, senza toccare alcun cloud.
+  terraform:
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      - name: fmt
+        run: terraform -chdir=infra fmt -check -recursive
+      - name: validate
+        run: |
+          terraform -chdir=infra init -backend=false -input=false
+          terraform -chdir=infra validate
+
+  # shellcheck è preinstallato sui runner ubuntu.
+  scripts:
+    needs: changes
+    if: needs.changes.outputs.scripts == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck infra/deploy.sh backend/entrypoint.sh
+
+  # --- Sicurezza: girano su ogni PR, indipendenti dai paths ---
+
+  # Cerca segreti committati per sbaglio (chiavi Brevo, SA JSON, SECRET_KEY…).
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gitleaks confronta tutta la storia della PR
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Segnala dipendenze vulnerabili introdotte dalla PR.
+  # Richiede il Dependency Graph attivo (gratis sui repo pubblici).
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
