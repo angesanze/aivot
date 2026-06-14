@@ -80,6 +80,10 @@ resource "google_sql_database_instance" "pg" {
   database_version = "POSTGRES_16"
 
   settings {
+    # Il tier economico db-f1-micro (shared-core) esiste solo nell'edizione
+    # ENTERPRISE; senza dichiararla, alcune region/progetti defaultano a
+    # ENTERPRISE_PLUS, che accetta solo i tier db-perf-optimized-*.
+    edition           = "ENTERPRISE"
     tier              = var.db_tier
     availability_type = "ZONAL"
     disk_autoresize   = true
