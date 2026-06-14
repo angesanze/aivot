@@ -9,11 +9,11 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from solver.engine import solve
-from solver.explain import explain
+from config.cloud_tasks import enqueue
 from config.translations import tr
 from .importers import ImportError_, parse_people_file
 from .models import ConstraintInstance, Dataset, Resource, Run, TimeSlot
+from .tasks import execute_run
 from .serializers import (ConstraintInstanceSerializer, DatasetSerializer,
                           ResourceSerializer, RunSerializer, TimeSlotSerializer)
 
@@ -49,48 +49,21 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def solve(self, request, pk=None):
-        """Esegue il motore sul dataset: legge risorse, slot e vincoli
-        attivi, costruisce il modello CP-SAT a runtime e salva l'esito."""
+        """Avvia il motore sul dataset. Se la coda Cloud Tasks "solver" è
+        attiva (Cloud Run) la Run nasce PENDING e il calcolo lo fa il worker
+        in background: si risponde 202 e il frontend fa polling sullo stato.
+        In locale (niente code) il calcolo gira inline e si torna la Run
+        già completata (201), come da sempre."""
         ds = self.get_object()
         time_limit = _clamp_time_limit(request.data.get("time_limit"))
-
-        resources = [
-            {"id": r.id, "name": r.name, "skills": r.skills}
-            for r in ds.resources.all()
-        ]
-        slots = [
-            {"id": s.id, "day": s.day.isoformat(), "code": s.code,
-             "start": s.start.strftime("%H:%M") if s.start else "00:00",
-             "end": s.end.strftime("%H:%M") if s.end else "00:00"}
-            for s in ds.slots.all()
-        ]
-        constraints = [
-            {"id": c.id, "type": c.template.code, "params": c.params,
-             "nature": c.nature, "weight": c.weight,
-             "label": c.display_label()}
-            for c in ds.constraints.filter(enabled=True)
-                                   .select_related("template")
-        ]
-
-        run = Run.objects.create(dataset=ds, status="RUNNING",
+        run = Run.objects.create(dataset=ds, status="PENDING",
                                  time_limit=time_limit)
-        try:
-            result = solve(resources, slots, constraints, time_limit)
-            run.status = result["status"]
-            run.wall_time = result["wall_time"]
-            run.objective = result["objective"]
-            run.assignments = result["assignments"]
-            run.violations = result["violations"]
-            run.conflicts = result["conflicts"]
-            run.explanation = explain(result, resources, slots, constraints)
-        except Exception as exc:  # parametri malformati, tipo ignoto, ecc.
-            logger.exception("solve fallito per dataset %s", ds.pk)
-            run.status = "ERROR"
-            run.error = str(exc)
-            run.explanation = tr(
-                "Il calcolo si è interrotto per un errore tecnico (vedi "
-                "messaggio sotto), non per colpa delle regole.")
-        run.save()
+
+        if enqueue("solver", "/tasks/solve/", {"run_id": run.id}):
+            return Response(RunSerializer(run).data,
+                            status=status.HTTP_202_ACCEPTED)
+
+        execute_run(run)
         return Response(RunSerializer(run).data,
                         status=status.HTTP_201_CREATED)
 

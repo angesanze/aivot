@@ -11,5 +11,16 @@ backend/staticfiles/
 node_modules/
 dist/
 
+# Terraform (stato e cache locali; il lock file invece si versiona)
+infra/.terraform/
+*.tfstate
+*.tfstate.*
+infra/*.tfvars
+!infra/*.tfvars.example
+
 # Sistema
 .DS_Store
+
+# Coordinamento agenti (stato locale, non versionato)
+.agents/
+.agents/memory.json

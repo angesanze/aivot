@@ -58,13 +58,18 @@ TEMPLATES = [{
 
 # Postgres di default; sqlite come fallback per sviluppo rapido senza container
 if os.environ.get("POSTGRES_HOST"):
+    _pg_host = os.environ["POSTGRES_HOST"]
+    # Su Cloud Run la connessione a Cloud SQL passa da un socket unix
+    # (/cloudsql/PROGETTO:REGIONE:ISTANZA): in quel caso HOST è la cartella
+    # del socket e la porta non si usa.
+    _pg_socket = _pg_host.startswith("/")
     DATABASES = {"default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.environ.get("POSTGRES_DB", "solverstore"),
         "USER": os.environ.get("POSTGRES_USER", "solverstore"),
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "solverstore"),
-        "HOST": os.environ["POSTGRES_HOST"],
-        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        "HOST": _pg_host,
+        "PORT": "" if _pg_socket else os.environ.get("POSTGRES_PORT", "5432"),
     }}
 else:
     DATABASES = {"default": {
@@ -132,3 +137,30 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID") or ""
 
 # URL pubblico del frontend, usato nei link delle email (reset password)
 FRONTEND_URL = os.environ.get("FRONTEND_URL") or "http://localhost:5173"
+
+# --- Cloud Run / Cloud Tasks ---------------------------------------------
+# URL pubblico di QUESTO servizio backend (es. https://aivot-xxx.run.app).
+# Serve sia come destinazione dei task sia come audience del token OIDC.
+# Vuoto in locale: le code si disattivano e tutto gira inline/in thread.
+SERVICE_URL = (os.environ.get("SERVICE_URL") or "").rstrip("/")
+
+# Cloud Tasks: progetto, regione, code e service account che firma i task.
+# Se uno qualunque manca, `config.cloud_tasks.enabled()` è False ovunque.
+CLOUD_TASKS_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT") or ""
+CLOUD_TASKS_LOCATION = os.environ.get("CLOUD_TASKS_LOCATION") or ""
+CLOUD_TASKS_SERVICE_URL = SERVICE_URL
+CLOUD_TASKS_INVOKER_SA = os.environ.get("CLOUD_TASKS_INVOKER_SA") or ""
+CLOUD_TASKS_QUEUE_EMAILS = os.environ.get("CLOUD_TASKS_QUEUE_EMAILS") or ""
+CLOUD_TASKS_QUEUE_SOLVER = os.environ.get("CLOUD_TASKS_QUEUE_SOLVER") or ""
+
+# Dietro il proxy di Cloud Run l'header X-Forwarded-Proto dice "https":
+# senza questo Django costruisce URL assoluti in http e i redirect rompono.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# L'host del servizio (xxx.run.app) va ammesso e dichiarato CSRF-trusted.
+if SERVICE_URL:
+    _service_host = SERVICE_URL.split("://", 1)[-1]
+    if _service_host not in ALLOWED_HOSTS and "*" not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_service_host)
+    if SERVICE_URL not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(SERVICE_URL)
