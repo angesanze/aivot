@@ -137,7 +137,7 @@ catalog ↔ handler consistency at startup.
 ## Tests
 
 ```bash
-docker compose exec backend python manage.py test    # 67 tests
+docker compose exec backend python manage.py test    # 68 tests
 ```
 
 They cover the engine (every rule family, verified against the
