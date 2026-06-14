@@ -110,9 +110,12 @@ def verify_task_request(request):
         return settings.DEBUG
 
     auth = request.META.get("HTTP_AUTHORIZATION", "")
-    if not auth.startswith("Bearer "):
+    parts = auth.split(None, 1)
+    # "Bearer <token>": un header senza token (es. "Bearer ") si rifiuta
+    # pulito con False, senza far esplodere un IndexError -> 500.
+    if len(parts) < 2 or parts[0] != "Bearer":
         return False
-    token = auth.split(None, 1)[1]
+    token = parts[1]
     try:
         from google.auth.transport import requests as g_requests
         from google.oauth2 import id_token

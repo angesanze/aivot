@@ -159,7 +159,10 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # L'host del servizio (xxx.run.app) va ammesso e dichiarato CSRF-trusted.
 if SERVICE_URL:
-    _service_host = SERVICE_URL.split("://", 1)[-1]
+    # ALLOWED_HOSTS vuole il solo host, senza schema né porta (se per caso
+    # SERVICE_URL ne avesse una, es. in test). CSRF_TRUSTED_ORIGINS invece
+    # vuole l'origine completa di schema (e porta).
+    _service_host = SERVICE_URL.split("://", 1)[-1].split(":", 1)[0]
     if _service_host not in ALLOWED_HOSTS and "*" not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(_service_host)
     if SERVICE_URL not in CSRF_TRUSTED_ORIGINS:

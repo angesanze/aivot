@@ -117,3 +117,17 @@ top of the workflow file.
   `verify_task_request`).
 - Secrets live in Secret Manager and are injected into Cloud Run as secret
   env refs — never baked into the image or the Cloud Tasks payloads.
+
+## Production hardening
+
+Defaults favour a simple one-button deploy. At larger scale, consider:
+
+- **Database migrations** run in the container entrypoint
+  (`backend/entrypoint.sh`). Fine for scale-to-zero / low traffic, but if
+  many instances cold-start at once they all try to migrate. Postgres
+  serializes DDL so the real risk is low, yet the clean pattern is to run
+  migrations as a separate release step — a **Cloud Run Job** executing
+  `manage.py migrate` — before updating the service, and drop `migrate`
+  from the entrypoint.
+- **`min_instances >= 1`** to avoid cold starts on the API.
+- A larger **`db_tier`** and `availability_type = "REGIONAL"` for HA.

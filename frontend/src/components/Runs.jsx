@@ -42,7 +42,14 @@ export default function Runs({ dsId, dataset, onGoTo }) {
       const deadline = Date.now() + (Number(timeLimit) + 30) * 1000;
       while (!TERMINAL.includes(run.status) && Date.now() < deadline) {
         await sleep(1500);
-        run = await api.run(run.id);
+        // Un blip di rete non deve far fallire il calcolo: il solve gira
+        // comunque su Cloud Tasks. Si ignora l'errore e si riprova al giro
+        // dopo, fino al tetto di tempo.
+        try {
+          run = await api.run(run.id);
+        } catch (pollErr) {
+          console.warn("polling run: errore temporaneo, riprovo", pollErr);
+        }
       }
       await refresh();
     } catch (e) {

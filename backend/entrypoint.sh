@@ -12,6 +12,12 @@
 # timeout del servizio (impostato a 3600s dal Terraform).
 set -e
 
+# NB: migrate gira all'avvio del container. È la scelta semplice e adatta a
+# questa scala (scale-to-zero, poche istanze). A volumi alti, con molte
+# istanze che fanno cold start insieme, conviene spostare le migrazioni in
+# uno step di release separato (Cloud Run Job / Cloud Build) prima di
+# aggiornare il servizio. Postgres serializza comunque le DDL, quindi qui il
+# rischio concreto è basso. Vedi infra/README.md ("Production hardening").
 python manage.py migrate --no-input
 python manage.py collectstatic --no-input
 # seed è idempotente: ripopola il catalogo se manca, altrimenti non tocca nulla
