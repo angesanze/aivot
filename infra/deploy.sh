@@ -93,17 +93,27 @@ FIREBASE_SITE="$(terraform output -raw firebase_site_id || true)"
 IMAGE="$AR_REPO/backend:$(date +%Y%m%d-%H%M%S)"
 ok "Infra pronta. Backend (placeholder) su $BACKEND_URL"
 
-say "2/5 · Cloud Build — costruisco l'immagine del backend"
+say "2/6 · Cloud Build — costruisco l'immagine del backend"
 gcloud builds submit "$ROOT/backend" --tag "$IMAGE" --project "$PROJECT_ID" --quiet
 
-say "3/5 · Terraform — immagine reale + URL servizio (attiva le code)"
+say "3/6 · Migrazioni DB — Cloud Run Job (prima che il backend vada online)"
+# Porta SOLO il job alla nuova immagine ed eseguilo: lo schema è pronto
+# prima che il servizio reale serva traffico. -target è di proposito qui.
+terraform apply -input=false -auto-approve "${TF_ARGS[@]}" \
+  -var "image=$IMAGE" -var "service_url=$BACKEND_URL" \
+  -target=google_cloud_run_v2_job.migrate
+gcloud run jobs execute aivot-migrate \
+  --region "$REGION" --project "$PROJECT_ID" --wait
+ok "Migrazioni applicate"
+
+say "4/6 · Terraform — immagine reale + URL servizio (attiva le code)"
 terraform apply -input=false -auto-approve "${TF_ARGS[@]}" \
   -var "image=$IMAGE" \
   -var "service_url=$BACKEND_URL"
 ok "Backend live su $BACKEND_URL"
 
 if [ -n "$FIREBASE_SITE" ] && command -v firebase >/dev/null; then
-  say "4/5 · Frontend — build"
+  say "5/6 · Frontend — build"
   ( cd "$ROOT/frontend" && npm install --no-audit --no-fund && npm run build )
 
   # Riscrive firebase.json con regione e servizio reali (rewrite /api → Cloud Run).
@@ -121,7 +131,7 @@ if [ -n "$FIREBASE_SITE" ] && command -v firebase >/dev/null; then
 }
 JSON
 
-  say "5/5 · Firebase Hosting — pubblico il frontend"
+  say "6/6 · Firebase Hosting — pubblico il frontend"
   ( cd "$ROOT/frontend" && firebase deploy --only hosting --project "$PROJECT_ID" --non-interactive )
   FRONTEND_URL="https://$FIREBASE_SITE.web.app"
 else

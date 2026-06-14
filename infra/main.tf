@@ -376,6 +376,89 @@ resource "google_cloud_run_v2_service_iam_member" "public" {
   member   = "allUsers"
 }
 
+# --- Job di release: migrazioni DB -----------------------------------------
+# Le migrazioni NON girano più nell'entrypoint del servizio (eviti le race
+# tra istanze che fanno cold start insieme). Le esegue questo job, una volta
+# per deploy, prima che il nuovo backend vada in servizio (vedi deploy.sh).
+# Esegue migrate e poi seed (idempotente). Env ridotto al minimo: gli serve
+# solo il DB e la SECRET_KEY per caricare i settings con DEBUG=0.
+resource "google_cloud_run_v2_job" "migrate" {
+  project  = local.project_id
+  name     = "aivot-migrate"
+  location = var.region
+
+  template {
+    template {
+      service_account = google_service_account.runtime.email
+      timeout         = "600s"
+      max_retries     = 1
+
+      volumes {
+        name = "cloudsql"
+        cloud_sql_instance {
+          instances = [google_sql_database_instance.pg.connection_name]
+        }
+      }
+
+      containers {
+        image   = var.image
+        command = ["sh", "-c", "python manage.py migrate --no-input && python manage.py seed"]
+
+        volume_mounts {
+          name       = "cloudsql"
+          mount_path = "/cloudsql"
+        }
+
+        env {
+          name  = "DEBUG"
+          value = "0"
+        }
+        env {
+          name  = "GOOGLE_CLOUD_PROJECT"
+          value = local.project_id
+        }
+        env {
+          name  = "POSTGRES_HOST"
+          value = "/cloudsql/${google_sql_database_instance.pg.connection_name}"
+        }
+        env {
+          name  = "POSTGRES_DB"
+          value = google_sql_database.app.name
+        }
+        env {
+          name  = "POSTGRES_USER"
+          value = google_sql_user.app.name
+        }
+        env {
+          name = "SECRET_KEY"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.s["aivot-secret-key"].secret_id
+              version = "latest"
+            }
+          }
+        }
+        env {
+          name = "POSTGRES_PASSWORD"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.s["aivot-db-password"].secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [
+    google_secret_manager_secret_version.v,
+    google_secret_manager_secret_iam_member.access,
+    google_sql_database.app,
+    google_project_iam_member.sql_client,
+  ]
+}
+
 # --- Firebase Hosting (predisposizione) ------------------------------------
 # Il contenuto del frontend lo carica deploy.sh con la Firebase CLI; qui si
 # abilita Firebase sul progetto e si crea il sito di hosting.

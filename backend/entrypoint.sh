@@ -12,17 +12,10 @@
 # timeout del servizio (impostato a 3600s dal Terraform).
 set -e
 
-# NB: migrate gira all'avvio del container. È la scelta semplice e adatta a
-# questa scala (scale-to-zero, poche istanze). A volumi alti, con molte
-# istanze che fanno cold start insieme, conviene spostare le migrazioni in
-# uno step di release separato (Cloud Run Job / Cloud Build) prima di
-# aggiornare il servizio. Postgres serializza comunque le DDL, quindi qui il
-# rischio concreto è basso. Vedi infra/README.md ("Production hardening").
-python manage.py migrate --no-input
-python manage.py collectstatic --no-input
-# seed è idempotente: ripopola il catalogo se manca, altrimenti non tocca nulla
-python manage.py seed || true
-
+# Migrazioni e seed NON girano qui: li esegue il Cloud Run Job "aivot-migrate"
+# come step di release (vedi deploy.sh e infra/main.tf), così più istanze in
+# cold start non corrono a migrare insieme. I file statici sono già raccolti
+# in fase di build (Dockerfile). Questo container fa solo da server.
 exec gunicorn config.wsgi:application \
   --bind "0.0.0.0:${PORT:-8000}" \
   --timeout "${GUNICORN_TIMEOUT:-3600}" \
