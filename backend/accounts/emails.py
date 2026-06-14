@@ -2,21 +2,20 @@
 Email transazionali via Brevo (https://developers.brevo.com).
 
 Chiave, mittente e interruttori arrivano da SiteConfig (modificabile dal
-backoffice /admin/), con le variabili d'ambiente come fallback. L'invio è
-asincrono (thread) e non blocca mai la richiesta: se Brevo è
-irraggiungibile o la chiave manca, la registrazione va comunque a buon
-fine e l'errore finisce nei log.
+backoffice /admin/), con le variabili d'ambiente come fallback. L'invio non
+blocca mai la richiesta: in produzione è una coda Cloud Tasks, in locale un
+thread fire-and-forget. Se Brevo è irraggiungibile o la chiave manca, la
+registrazione va comunque a buon fine e l'errore finisce nei log.
+
+Qui si costruisce solo l'HTML e si accoda il messaggio; la chiamata HTTP a
+Brevo vive in `accounts.tasks.deliver_email`.
 """
 import logging
 import threading
 
-import requests
-
 from config.translations import tr
 
 logger = logging.getLogger(__name__)
-
-BREVO_API = "https://api.brevo.com/v3/smtp/email"
 
 _STYLE = (
     "font-family:Inter,Arial,sans-serif;color:#111827;line-height:1.6;"
@@ -40,35 +39,28 @@ def _config():
 
 
 def send_raw(to_email, to_name, subject, html, cfg=None):
-    """Invio asincrono: la config si legge ORA (thread principale, con la
-    connessione DB della richiesta), il thread fa solo la chiamata HTTP."""
+    """Accoda un'email. In produzione finisce sulla coda Cloud Tasks
+    "emails" e la consegna la fa il worker `/tasks/email/`. In locale (code
+    non configurate) parte un thread fire-and-forget che non blocca la
+    richiesta: la config si legge ORA, finché la connessione DB della
+    richiesta è viva, e il thread fa solo la chiamata HTTP."""
     cfg = cfg or _config()
     if not cfg["brevo_api_key"]:
         logger.warning("chiave Brevo assente: salto '%s' a %s",
                        subject, to_email)
         return
 
-    def _task():
-        try:
-            r = requests.post(
-                BREVO_API,
-                timeout=10,
-                headers={"api-key": cfg["brevo_api_key"],
-                         "content-type": "application/json"},
-                json={
-                    "sender": {"name": cfg["brevo_sender_name"],
-                               "email": cfg["brevo_sender_email"]},
-                    "to": [{"email": to_email, "name": to_name or to_email}],
-                    "subject": subject,
-                    "htmlContent": html,
-                },
-            )
-            if r.status_code >= 300:
-                logger.error("Brevo %s: %s", r.status_code, r.text[:300])
-        except requests.RequestException:
-            logger.exception("invio email fallito a %s", to_email)
+    payload = {"to_email": to_email, "to_name": to_name,
+               "subject": subject, "html": html}
 
-    threading.Thread(target=_task, daemon=True).start()
+    from config.cloud_tasks import enqueue
+    if enqueue("emails", "/tasks/email/", payload):
+        return
+
+    # Locale/test: thread come prima, cfg già letta nel thread principale.
+    from .tasks import deliver_email
+    threading.Thread(target=deliver_email, args=(payload, cfg),
+                     daemon=True).start()
 
 
 def send_welcome(user):

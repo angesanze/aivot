@@ -121,6 +121,7 @@ export const api = {
 
   // La lista run è paginata lato server: si estrae la prima pagina
   runs: (ds) => req(`/runs/?dataset=${ds}`).then((d) => d.results ?? d),
+  run: (id) => req(`/runs/${id}/`),
 
   shareRun: (id) => post(`/runs/${id}/share/`, {}),
   unshareRun: (id) => req(`/runs/${id}/share/`, { method: "DELETE" }),

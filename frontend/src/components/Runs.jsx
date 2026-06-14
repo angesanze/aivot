@@ -8,6 +8,11 @@ import { useT } from "../i18n.jsx";
 /* Quante run recenti mostrare qui: lo storico completo vive nell'archivio. */
 const RECENT = 3;
 
+/* Stati conclusi del solver: appena la run ne raggiunge uno il polling si
+   ferma. PENDING/RUNNING significano "ancora in coda/in corso". */
+const TERMINAL = ["OPTIMAL", "FEASIBLE", "INFEASIBLE", "ERROR", "UNKNOWN"];
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 export default function Runs({ dsId, dataset, onGoTo }) {
   const t = useT();
   const { resources, slots, runs, error: loadError, refresh } =
@@ -28,8 +33,24 @@ export default function Runs({ dsId, dataset, onGoTo }) {
     setSolving(true);
     setError(null);
     try {
-      const run = await api.solve(dsId, timeLimit);
+      let run = await api.solve(dsId, timeLimit);
       setOpen(run.id);
+      // In produzione il calcolo gira su Cloud Tasks: la run torna
+      // PENDING/RUNNING e si fa polling fino all'esito. In locale arriva
+      // già conclusa e il ciclo non parte nemmeno. Tetto di sicurezza:
+      // il time limit più un margine, così non si attende all'infinito.
+      const deadline = Date.now() + (Number(timeLimit) + 30) * 1000;
+      while (!TERMINAL.includes(run.status) && Date.now() < deadline) {
+        await sleep(1500);
+        // Un blip di rete non deve far fallire il calcolo: il solve gira
+        // comunque su Cloud Tasks. Si ignora l'errore e si riprova al giro
+        // dopo, fino al tetto di tempo.
+        try {
+          run = await api.run(run.id);
+        } catch (pollErr) {
+          console.warn("polling run: errore temporaneo, riprovo", pollErr);
+        }
+      }
       await refresh();
     } catch (e) {
       setError(e.message);

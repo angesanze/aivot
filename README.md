@@ -31,6 +31,24 @@ The `demo` user comes with a sample project (hospital ward: 9 nurses,
 7 days, M/P/N shifts) ready to schedule. **Change the superadmin
 password in production** (or set it via `.env` before first start).
 
+## Deploy to Google Cloud
+
+One button provisions the whole stack on a fresh (or existing) Google
+Cloud project — Cloud SQL, Cloud Run for the Django backend, Firebase
+Hosting for the frontend, and the Cloud Tasks queues that run emails and
+solver jobs in the background:
+
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/angesanze/aivot&cloudshell_working_dir=infra&cloudshell_command=bash%20deploy.sh)
+
+The script asks for a project name and a billing account, then does the
+rest (Terraform + Cloud Build + Firebase). It takes ~10–15 minutes,
+mostly Cloud SQL provisioning. Full details, prerequisites and the
+GitOps `production`-branch pipeline are in [`infra/README.md`](infra/README.md).
+
+> **Note**: creating a *new* project requires you to pick a billing
+> account — Google does not allow that to be fully unattended (cost
+> protection). Everything after that is automatic.
+
 ## Configuration (optional)
 
 Nothing is hardcoded: everything comes from environment variables, with

@@ -7,3 +7,7 @@ gunicorn==23.0.0
 whitenoise==6.8.2
 requests==2.33.0
 openpyxl==3.1.5
+# Code asincrone su Cloud Run (email + run del solver). Facoltative in
+# locale: il codice ricade su thread/inline se le code non sono configurate.
+google-cloud-tasks==2.16.5
+google-auth==2.35.0
