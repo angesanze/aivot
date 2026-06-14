@@ -1,11 +1,11 @@
-Django==5.1.7
+Django==5.1.15
 djangorestframework==3.15.2
 django-cors-headers==4.6.0
 psycopg2-binary==2.9.10
 ortools==9.12.4544
 gunicorn==23.0.0
 whitenoise==6.8.2
-requests==2.32.3
+requests==2.33.0
 openpyxl==3.1.5
 # Code asincrone su Cloud Run (email + run del solver). Facoltative in
 # locale: il codice ricade su thread/inline se le code non sono configurate.
