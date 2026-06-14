@@ -61,7 +61,10 @@ for v in ORG_ID BREVO_API_KEY BREVO_SENDER_EMAIL GOOGLE_CLIENT_ID; do
 done
 
 # Terraform usa le credenziali utente di Cloud Shell via access token.
-export GOOGLE_OAUTH_ACCESS_TOKEN="$(gcloud auth print-access-token)"
+# Dichiarazione e assegnazione separate: così un eventuale errore di gcloud
+# non viene mascherato dall'export (shellcheck SC2155).
+GOOGLE_OAUTH_ACCESS_TOKEN="$(gcloud auth print-access-token)"
+export GOOGLE_OAUTH_ACCESS_TOKEN
 
 TF_ARGS=(
   -var "project_id=$PROJECT_ID"
@@ -78,7 +81,9 @@ cd "$HERE"
 
 say "1/5 · Terraform — creo l'infrastruttura (prima passata)"
 # TF_INIT_ARGS: la CI ci inietta il backend remoto (GCS). In locale è vuoto
-# e lo stato resta sul filesystem di Cloud Shell.
+# e lo stato resta sul filesystem di Cloud Shell. Lo split in più flag è
+# voluto, quindi niente virgolette (shellcheck SC2086).
+# shellcheck disable=SC2086
 terraform init -input=false ${TF_INIT_ARGS:-}
 terraform apply -input=false -auto-approve "${TF_ARGS[@]}"
 
