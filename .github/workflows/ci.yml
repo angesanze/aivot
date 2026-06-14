@@ -126,13 +126,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Segnala dipendenze vulnerabili introdotte dalla PR.
-  # Richiede il Dependency Graph attivo (Settings → Security & analysis).
-  # Finché non è confermato attivo resta NON bloccante: informa senza
-  # tenere la PR rossa. Togli continue-on-error per renderlo vincolante.
-  dependency-review:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v4
+  # NOTA — vulnerabilità nelle dipendenze: gestite da Dependabot (alerts +
+  # security updates, attivi sul repo), non da un job CI. La
+  # dependency-review-action richiederebbe il Dependency Graph esposto
+  # all'action, qui non disponibile: Dependabot copre lo stesso bisogno in
+  # modo continuo, senza tenere la PR rossa per una questione di setup.
