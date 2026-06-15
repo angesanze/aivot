@@ -18,12 +18,18 @@ locals {
   # anche il service account che firma i token OIDC verso i worker.
   runtime_sa = "aivot-run@${local.project_id}.iam.gserviceaccount.com"
 
+  # URL Firebase di default (sito = project_id).
+  firebase_url = var.enable_firebase ? "https://${local.project_id}.web.app" : ""
+
   # URL pubblico del frontend: il dominio custom se impostato (es.
-  # https://aivot.rocks), altrimenti il sito Firebase di default. Finisce in
-  # FRONTEND_URL del backend → link nelle email + CSRF_TRUSTED_ORIGINS, così
-  # il login dell'admin via dominio custom funziona.
-  frontend_url = (var.custom_domain != "" ? "https://${var.custom_domain}" :
-  (var.enable_firebase ? "https://${local.project_id}.web.app" : ""))
+  # https://aivot.rocks), altrimenti il sito Firebase. Finisce in FRONTEND_URL
+  # del backend → link nelle email + CSRF_TRUSTED_ORIGINS, così il login
+  # dell'admin via dominio custom funziona.
+  frontend_url = var.custom_domain != "" ? "https://${var.custom_domain}" : local.firebase_url
+
+  # Con un dominio custom, l'URL Firebase resta comunque fidato per il CSRF:
+  # così l'admin è usabile su entrambi durante la transizione del dominio.
+  extra_csrf_origins = var.custom_domain != "" ? local.firebase_url : ""
 }
 
 # --- Progetto e fatturazione ------------------------------------------------
@@ -324,6 +330,10 @@ resource "google_cloud_run_v2_service" "backend" {
       env {
         name  = "CORS_ALLOWED_ORIGINS"
         value = local.frontend_url
+      }
+      env {
+        name  = "EXTRA_CSRF_ORIGINS"
+        value = local.extra_csrf_origins
       }
       env {
         name  = "BREVO_SENDER_EMAIL"

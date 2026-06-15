@@ -167,3 +167,11 @@ if SERVICE_URL:
         ALLOWED_HOSTS.append(_service_host)
     if SERVICE_URL not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(SERVICE_URL)
+
+# Origini extra fidate per il CSRF (es. il vecchio URL Firebase quando si passa
+# a un dominio custom): così l'admin resta usabile su entrambi durante la
+# transizione. Lista separata da virgole di origini complete (con schema).
+for _origin in (os.environ.get("EXTRA_CSRF_ORIGINS") or "").split(","):
+    _origin = _origin.strip()
+    if _origin and _origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_origin)
