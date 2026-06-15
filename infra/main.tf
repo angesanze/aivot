@@ -128,20 +128,30 @@ resource "random_password" "secret_key" {
   special = true
 }
 
-# Mappa nome-segreto -> valore. Il segreto Brevo si crea solo se c'è una
-# chiave, così non si referenzia una versione inesistente in Cloud Run.
+# I segreti: i NOMI (non sensibili) guidano il for_each, i VALORI (sensibili,
+# perché derivati dalle password generate) si usano solo come secret_data.
+# Tenerli separati è obbligatorio: Terraform vieta for_each/count su valori
+# sensibili. Il segreto Brevo si crea solo se c'è una chiave.
 locals {
-  secrets = merge(
+  # "C'è una chiave Brevo?" non è un dato segreto (lo è il valore): quindi
+  # nonsensitive() qui è legittimo e toglie la sensibilità dal for_each.
+  has_brevo = nonsensitive(var.brevo_api_key != "")
+
+  secret_names = concat(
+    ["aivot-secret-key", "aivot-db-password"],
+    local.has_brevo ? ["aivot-brevo-key"] : []
+  )
+  secret_values = merge(
     {
       "aivot-secret-key"  = random_password.secret_key.result
       "aivot-db-password" = random_password.db.result
     },
-    var.brevo_api_key != "" ? { "aivot-brevo-key" = var.brevo_api_key } : {}
+    local.has_brevo ? { "aivot-brevo-key" = var.brevo_api_key } : {}
   )
 }
 
 resource "google_secret_manager_secret" "s" {
-  for_each  = local.secrets
+  for_each  = toset(local.secret_names)
   project   = local.project_id
   secret_id = each.key
   replication {
@@ -151,9 +161,9 @@ resource "google_secret_manager_secret" "s" {
 }
 
 resource "google_secret_manager_secret_version" "v" {
-  for_each    = local.secrets
-  secret      = google_secret_manager_secret.s[each.key].id
-  secret_data = each.value
+  for_each    = google_secret_manager_secret.s
+  secret      = each.value.id
+  secret_data = local.secret_values[each.key]
 }
 
 # Il service account di runtime può leggere i segreti.
