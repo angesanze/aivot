@@ -99,3 +99,9 @@ variable "enable_firebase" {
   default     = true
   description = "true: predispone Firebase Hosting per il frontend. false: salta Firebase (lo deployi a mano)."
 }
+
+variable "custom_domain" {
+  type        = string
+  default     = ""
+  description = "Dominio personalizzato (es. 'aivot.rocks'), senza schema. Diventa l'URL pubblico (link email, CSRF). Vuoto = si usa l'URL Firebase di default. Va comunque collegato a Firebase Hosting (DNS + console)."
+}

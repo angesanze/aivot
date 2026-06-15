@@ -52,6 +52,7 @@ jobs:
           BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
           BREVO_SENDER_EMAIL: ${{ vars.BREVO_SENDER_EMAIL }}
           GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          CUSTOM_DOMAIN: ${{ vars.CUSTOM_DOMAIN }}
           # Stato Terraform su GCS: deploy.sh scrive backend.tf e fa init.
           TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
           # La Firebase CLI e Terraform usano queste credenziali ADC.

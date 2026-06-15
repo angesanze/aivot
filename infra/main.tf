@@ -18,8 +18,12 @@ locals {
   # anche il service account che firma i token OIDC verso i worker.
   runtime_sa = "aivot-run@${local.project_id}.iam.gserviceaccount.com"
 
-  # URL del frontend su Firebase Hosting (sito di default = project_id).
-  frontend_url = var.enable_firebase ? "https://${local.project_id}.web.app" : ""
+  # URL pubblico del frontend: il dominio custom se impostato (es.
+  # https://aivot.rocks), altrimenti il sito Firebase di default. Finisce in
+  # FRONTEND_URL del backend → link nelle email + CSRF_TRUSTED_ORIGINS, così
+  # il login dell'admin via dominio custom funziona.
+  frontend_url = (var.custom_domain != "" ? "https://${var.custom_domain}" :
+  (var.enable_firebase ? "https://${local.project_id}.web.app" : ""))
 }
 
 # --- Progetto e fatturazione ------------------------------------------------

@@ -55,6 +55,7 @@ fi
 ask BREVO_API_KEY      "Chiave API Brevo (vuoto = email disattivate)" " "
 ask BREVO_SENDER_EMAIL "Mittente email validato su Brevo (vuoto = nessuno)" " "
 ask GOOGLE_CLIENT_ID   "Google OAuth Client ID (vuoto = login Google nascosto)" " "
+ask CUSTOM_DOMAIN      "Dominio personalizzato (es. aivot.rocks; vuoto = nessuno)" " "
 
 # Pipeline CI/CD (push-to-deploy): opzionale. Se sì, lo stato Terraform va
 # SUBITO su un bucket remoto (così non serve nessuna migrazione dopo) e a
@@ -66,7 +67,7 @@ if [ "$SETUP_PIPELINE" = "true" ] && [ -z "${TF_STATE_BUCKET:-}" ]; then
 fi
 
 # Normalizza i " " (placeholder per "lascia vuoto") in stringa vuota.
-for v in ORG_ID BREVO_API_KEY BREVO_SENDER_EMAIL GOOGLE_CLIENT_ID; do
+for v in ORG_ID BREVO_API_KEY BREVO_SENDER_EMAIL GOOGLE_CLIENT_ID CUSTOM_DOMAIN; do
   eval "[ \"\${$v:-}\" = ' ' ] && $v=''" || true
 done
 
@@ -106,6 +107,7 @@ TF_ARGS=(
   -var "brevo_api_key=${BREVO_API_KEY:-}"
   -var "brevo_sender_email=${BREVO_SENDER_EMAIL:-}"
   -var "google_client_id=${GOOGLE_CLIENT_ID:-}"
+  -var "custom_domain=${CUSTOM_DOMAIN:-}"
 )
 
 cd "$HERE"
@@ -165,7 +167,9 @@ if [ -n "$FIREBASE_SITE" ] && command -v firebase >/dev/null; then
   say "5/6 · Frontend — build"
   ( cd "$ROOT/frontend" && npm install --no-audit --no-fund && npm run build )
 
-  # Riscrive firebase.json con regione e servizio reali (rewrite /api → Cloud Run).
+  # Riscrive firebase.json con regione e servizio reali. /api, /admin e gli
+  # statici dell'admin (/static) vanno a Cloud Run (Django); tutto il resto
+  # alla SPA. Così <dominio>/admin apre il backoffice Django.
   cat > "$ROOT/frontend/firebase.json" <<JSON
 {
   "hosting": {
@@ -174,6 +178,8 @@ if [ -n "$FIREBASE_SITE" ] && command -v firebase >/dev/null; then
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       { "source": "/api/**", "run": { "serviceId": "aivot-backend", "region": "$REGION" } },
+      { "source": "/admin/**", "run": { "serviceId": "aivot-backend", "region": "$REGION" } },
+      { "source": "/static/**", "run": { "serviceId": "aivot-backend", "region": "$REGION" } },
       { "source": "**", "destination": "/index.html" }
     ]
   }
