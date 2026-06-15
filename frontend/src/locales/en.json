@@ -57,6 +57,7 @@
   "common.edit": "edit",
   "common.retry": "retry",
   "common.save": "Save",
+  "kofi.support": "Buy me a coffee",
   "composer.active_rules": "Active rules in the project · {n}",
   "composer.add_from_catalog": "Add from the catalogue",
   "composer.add_rule": "Add rule",

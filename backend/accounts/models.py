@@ -31,6 +31,11 @@ class SiteConfig(models.Model):
         "URL pubblico del frontend", blank=True,
         help_text="Usato nei link delle email (es. reset password). "
                   "Vuoto = variabile d'ambiente.")
+    kofi_handle = models.CharField(
+        "Handle Ko-fi", max_length=80, blank=True,
+        help_text="Nome utente Ko-fi (es. 'angelosanzeri' per "
+                  "ko-fi.com/angelosanzeri). Compilato = mostra il bottone "
+                  "di supporto nel frontend; vuoto = nessun bottone.")
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -63,4 +68,5 @@ class SiteConfig(models.Model):
             "google_client_id": (cfg.google_client_id
                                  or settings.GOOGLE_CLIENT_ID),
             "frontend_url": cfg.frontend_url or settings.FRONTEND_URL,
+            "kofi_handle": cfg.kofi_handle.strip(),
         }

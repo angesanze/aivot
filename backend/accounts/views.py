@@ -49,9 +49,12 @@ def _bad(msg):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def config(request):
-    """Configurazione pubblica per la pagina di accesso."""
-    return Response(
-        {"google_client_id": SiteConfig.effective()["google_client_id"]})
+    """Configurazione pubblica letta dal frontend (login + bottone Ko-fi)."""
+    eff = SiteConfig.effective()
+    return Response({
+        "google_client_id": eff["google_client_id"],
+        "kofi_handle": eff["kofi_handle"],
+    })
 
 
 @api_view(["POST"])

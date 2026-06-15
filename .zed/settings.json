@@ -1,0 +1,16 @@
+{
+  "context_servers": {
+    "postgres-context-server": {
+      "settings": {
+        "database_url": "postgresql://solverstore:solverstore@localhost:5433/solverstore"
+      }
+    },
+    "mcp-server-playwright": {
+      "settings": {
+        "browser": "chromium",
+        "headless": false,
+        "vision": false
+      }
+    }
+  }
+}

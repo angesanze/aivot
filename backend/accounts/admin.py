@@ -33,6 +33,12 @@ class SiteConfigAdmin(admin.ModelAdmin):
         }),
         ("Accesso con Google", {"fields": ("google_client_id",)}),
         ("Piattaforma", {"fields": ("frontend_url",)}),
+        ("Supporto (Ko-fi)", {
+            "fields": ("kofi_handle",),
+            "description": "Compila l'handle per mostrare il bottone "
+                           "\"offrimi un caffè\" in basso a destra nel "
+                           "frontend. Svuota per nasconderlo.",
+        }),
     )
 
     # Singleton: niente aggiunte oltre la prima riga, niente cancellazione
