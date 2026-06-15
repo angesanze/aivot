@@ -136,7 +136,27 @@ say "1/6 · Terraform — creo l'infrastruttura (prima passata)"
 # Lo split di TF_INIT_ARGS in più flag è voluto: niente virgolette (SC2086).
 # shellcheck disable=SC2086
 terraform init -input=false ${TF_INIT_ARGS}
-terraform apply -input=false -auto-approve "${TF_ARGS[@]}"
+
+# Su un REDEPLOY il servizio esiste già: mantieni immagine e URL attuali nella
+# prima passata, altrimenti Terraform riporterebbe il servizio all'immagine
+# placeholder (downtime a ogni deploy, e rotto se il deploy fallisce a metà).
+# Al primo deploy il servizio non esiste → resta il default (placeholder),
+# corretto perché l'immagine reale non è ancora stata costruita.
+PLACEHOLDER="us-docker.pkg.dev/cloudrun/container/hello"
+CUR_IMAGE="$(gcloud run services describe aivot-backend --region "$REGION" \
+  --project "$PROJECT_ID" \
+  --format='value(spec.template.spec.containers[0].image)' 2>/dev/null || true)"
+CUR_URL="$(gcloud run services describe aivot-backend --region "$REGION" \
+  --project "$PROJECT_ID" --format='value(status.url)' 2>/dev/null || true)"
+PASS1_ARGS=()
+if [ -n "$CUR_IMAGE" ] && [ "$CUR_IMAGE" != "$PLACEHOLDER" ]; then
+  PASS1_ARGS+=(-var "image=$CUR_IMAGE")
+fi
+if [ -n "$CUR_URL" ]; then
+  PASS1_ARGS+=(-var "service_url=$CUR_URL")
+fi
+
+terraform apply -input=false -auto-approve "${TF_ARGS[@]}" "${PASS1_ARGS[@]}"
 
 AR_REPO="$(terraform output -raw artifact_repo)"
 BACKEND_URL="$(terraform output -raw backend_url)"
