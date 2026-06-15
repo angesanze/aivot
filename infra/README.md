@@ -112,11 +112,36 @@ shared.** The manual flow keeps it locally; CI/CD keeps it in a GCS bucket.
 Mixing the two on one project only works if both point at the same state —
 hence the migration step below.
 
-## Continuous deployment (push-to-deploy) — full runbook
+## Continuous deployment (push-to-deploy)
 
 `.github/workflows/deploy.yml` runs `deploy.sh` on every push to the
 `production` branch, with `CREATE_PROJECT=false` and Terraform state in a
-GCS bucket. Set it up **once**. All commands are idempotent and repeatable.
+GCS bucket.
+
+### Easiest: let `deploy.sh` set it up (recommended, no migration)
+
+When you run `deploy.sh` (button or CLI) answer **yes** to:
+
+```
+Configurare anche la pipeline CI/CD push-to-deploy? (true/false)
+```
+
+With that, the deploy uses **remote state from the start** (so there's
+nothing to migrate later), and at the end it:
+
+- creates the GCS state bucket (if missing),
+- creates the `aivot-deployer` service account + a key,
+- removes the project from Terraform state (so CI never tries to destroy it),
+- prints the exact `gh` commands to set the GitHub secrets, and the
+  `git push origin main:production` that turns the pipeline on.
+
+Follow those printed steps once and you're done. This is the clean path for
+a **new** project.
+
+### Manual runbook (e.g. migrating a project you already deployed locally)
+
+Use this only if you already deployed with **local** state and want to move
+it onto the pipeline without recreating anything. All commands idempotent.
 
 Pick your values first (used throughout):
 

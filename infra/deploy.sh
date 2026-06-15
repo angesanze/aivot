@@ -9,6 +9,7 @@
 #   3. costruisce e pubblica l'immagine del backend con Cloud Build
 #   4. seconda passata di Terraform: immagine reale + URL servizio → code attive
 #   5. builda il frontend e lo pubblica su Firebase Hosting
+#   6. (opzionale) prepara la pipeline CI/CD push-to-deploy su GitHub Actions
 #
 # Uso interattivo:   ./deploy.sh
 # Uso non interattivo (CI): valorizza le variabili PROJECT_ID, BILLING_ACCOUNT,
@@ -55,6 +56,15 @@ ask BREVO_API_KEY      "Chiave API Brevo (vuoto = email disattivate)" " "
 ask BREVO_SENDER_EMAIL "Mittente email validato su Brevo (vuoto = nessuno)" " "
 ask GOOGLE_CLIENT_ID   "Google OAuth Client ID (vuoto = login Google nascosto)" " "
 
+# Pipeline CI/CD (push-to-deploy): opzionale. Se sì, lo stato Terraform va
+# SUBITO su un bucket remoto (così non serve nessuna migrazione dopo) e a
+# fine deploy lo script prepara il service account e stampa le istruzioni
+# per accendere GitHub Actions.
+ask SETUP_PIPELINE "Configurare anche la pipeline CI/CD push-to-deploy? (true/false)" "false"
+if [ "$SETUP_PIPELINE" = "true" ] && [ -z "${TF_STATE_BUCKET:-}" ]; then
+  ask TF_STATE_BUCKET "Nome del bucket GCS per lo stato Terraform" "$PROJECT_ID-tfstate"
+fi
+
 # Normalizza i " " (placeholder per "lascia vuoto") in stringa vuota.
 for v in ORG_ID BREVO_API_KEY BREVO_SENDER_EMAIL GOOGLE_CLIENT_ID; do
   eval "[ \"\${$v:-}\" = ' ' ] && $v=''" || true
@@ -91,6 +101,12 @@ cd "$HERE"
 TF_INIT_ARGS=""
 if [ -n "${TF_STATE_BUCKET:-}" ]; then
   say "Stato Terraform remoto: gs://$TF_STATE_BUCKET (prefix aivot/$PROJECT_ID)"
+  # Crea il bucket se non esiste (idempotente): così non serve prepararlo a mano.
+  if ! gcloud storage buckets describe "gs://$TF_STATE_BUCKET" >/dev/null 2>&1; then
+    gcloud storage buckets create "gs://$TF_STATE_BUCKET" \
+      --project "$PROJECT_ID" --location "$REGION"
+    gcloud storage buckets update "gs://$TF_STATE_BUCKET" --versioning
+  fi
   printf 'terraform {\n  backend "gcs" {}\n}\n' > backend.tf
   TF_INIT_ARGS="-reconfigure -backend-config=bucket=$TF_STATE_BUCKET -backend-config=prefix=aivot/$PROJECT_ID"
 fi
@@ -159,3 +175,50 @@ echo "  Admin    : $BACKEND_URL/admin/  (utente: admin — cambia subito la pass
 echo
 echo "Le code Cloud Tasks 'emails' e 'solver-runs' sono attive: email e calcoli"
 echo "girano in background. Buona pianificazione."
+
+# --- Pipeline CI/CD: prepara l'accesso per GitHub Actions --------------------
+if [ "${SETUP_PIPELINE:-false}" = "true" ]; then
+  say "Pipeline CI/CD — preparo l'accesso per GitHub Actions"
+
+  DEPLOYER="aivot-deployer@${PROJECT_ID}.iam.gserviceaccount.com"
+  if ! gcloud iam service-accounts describe "$DEPLOYER" --project "$PROJECT_ID" >/dev/null 2>&1; then
+    gcloud iam service-accounts create aivot-deployer --project "$PROJECT_ID" \
+      --display-name "AIVOT GitHub deployer"
+  fi
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member "serviceAccount:$DEPLOYER" --role roles/owner --condition=None >/dev/null
+  KEY_FILE="$HERE/aivot-deployer-key.json"
+  gcloud iam service-accounts keys create "$KEY_FILE" --iam-account "$DEPLOYER"
+
+  # La CI gira con create_project=false: Terraform NON deve gestire il progetto,
+  # altrimenti la prima run proverebbe a distruggerlo. Lo togliamo dallo stato
+  # (il progetto resta su GCP, semplicemente non più gestito da Terraform).
+  if [ "${CREATE_PROJECT:-false}" = "true" ]; then
+    terraform state rm 'google_project.this[0]' 2>/dev/null || true
+  fi
+
+  cat <<EOF
+
+================  ATTIVA LA PIPELINE (3 passi)  ================
+1) Imposta i segreti/variabili su GitHub. Richiede la CLI 'gh' autenticata
+   ('gh auth login' se serve). Copia-incolla:
+
+   gh secret   set GCP_CREDENTIALS  < "$KEY_FILE"
+   gh variable set GCP_PROJECT_ID   --body "$PROJECT_ID"
+   gh variable set GCP_REGION       --body "$REGION"
+   gh variable set TF_STATE_BUCKET  --body "$TF_STATE_BUCKET"
+   # facoltativi (email/Google), se li usi:
+   # gh secret   set BREVO_API_KEY      --body "<chiave>"
+   # gh variable set BREVO_SENDER_EMAIL --body "<mittente>"
+   # gh variable set GOOGLE_CLIENT_ID   --body "<client-id>"
+
+   (in alternativa via UI: Settings -> Secrets and variables -> Actions)
+
+2) Cancella la chiave dal disco quando hai finito:
+   rm "$KEY_FILE"
+
+3) Accendi la pipeline: da quel push in poi ogni 'production' deploya da solo.
+   git push origin main:production
+===============================================================
+EOF
+fi

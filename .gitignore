@@ -20,6 +20,9 @@ infra/*.tfvars
 # backend.tf lo genera deploy.sh quando si usa lo stato remoto (CI/CD):
 # non va versionato, altrimenti romperebbe il deploy locale a stato locale.
 infra/backend.tf
+# Chiavi service account scaricate da deploy.sh per la pipeline: mai versionarle
+*-key.json
+key.json
 
 # Sistema
 .DS_Store
