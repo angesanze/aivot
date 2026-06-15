@@ -217,28 +217,61 @@ if [ "${SETUP_PIPELINE:-false}" = "true" ]; then
   KEY_FILE="$HERE/aivot-deployer-key.json"
   gcloud iam service-accounts keys create "$KEY_FILE" --iam-account "$DEPLOYER"
 
-  cat <<EOF
+  # Repo GitHub dedotto dal remote della clone (così funziona su un fork
+  # qualunque, non solo sull'originale).
+  REPO="$(git -C "$ROOT" remote get-url origin 2>/dev/null \
+    | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')"
+
+  if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1 && [ -n "$REPO" ]; then
+    # gh disponibile e autenticato: imposto io segreti e variabili.
+    say "Configuro segreti e variabili su GitHub ($REPO)"
+    gh secret   set GCP_CREDENTIALS --repo "$REPO" < "$KEY_FILE"
+    gh variable set GCP_PROJECT_ID  --repo "$REPO" --body "$PROJECT_ID"
+    gh variable set GCP_REGION      --repo "$REPO" --body "$REGION"
+    gh variable set TF_STATE_BUCKET --repo "$REPO" --body "$TF_STATE_BUCKET"
+    if [ -n "${BREVO_API_KEY:-}" ]; then
+      printf '%s' "$BREVO_API_KEY" | gh secret set BREVO_API_KEY --repo "$REPO"
+    fi
+    if [ -n "${BREVO_SENDER_EMAIL:-}" ]; then
+      gh variable set BREVO_SENDER_EMAIL --repo "$REPO" --body "$BREVO_SENDER_EMAIL"
+    fi
+    if [ -n "${GOOGLE_CLIENT_ID:-}" ]; then
+      gh variable set GOOGLE_CLIENT_ID --repo "$REPO" --body "$GOOGLE_CLIENT_ID"
+    fi
+    rm -f "$KEY_FILE"
+    ok "Segreti GitHub impostati su $REPO"
+    cat <<EOF
+
+================  PIPELINE CONFIGURATA 🎉  ================
+Tutto pronto. Per deployare in automatico, d'ora in poi:
+
+    git push origin main:production
+
+Ogni push sul branch 'production' farà partire il deploy su GitHub Actions.
+==========================================================
+EOF
+  else
+    # gh assente o non autenticato: stampo le istruzioni (con il repo giusto).
+    REPO_FLAG=""
+    [ -n "$REPO" ] && REPO_FLAG=" --repo $REPO"
+    cat <<EOF
 
 ================  ATTIVA LA PIPELINE (3 passi)  ================
-1) Imposta i segreti/variabili su GitHub. Richiede la CLI 'gh' autenticata
-   ('gh auth login' se serve). Copia-incolla:
+'gh' non risulta autenticato: esegui 'gh auth login', poi questi comandi.
 
-   gh secret   set GCP_CREDENTIALS  < "$KEY_FILE"
-   gh variable set GCP_PROJECT_ID   --body "$PROJECT_ID"
-   gh variable set GCP_REGION       --body "$REGION"
-   gh variable set TF_STATE_BUCKET  --body "$TF_STATE_BUCKET"
-   # facoltativi (email/Google), se li usi:
-   # gh secret   set BREVO_API_KEY      --body "<chiave>"
-   # gh variable set BREVO_SENDER_EMAIL --body "<mittente>"
-   # gh variable set GOOGLE_CLIENT_ID   --body "<client-id>"
-
+1) Segreti/variabili su GitHub:
+   gh secret   set GCP_CREDENTIALS$REPO_FLAG < "$KEY_FILE"
+   gh variable set GCP_PROJECT_ID$REPO_FLAG  --body "$PROJECT_ID"
+   gh variable set GCP_REGION$REPO_FLAG      --body "$REGION"
+   gh variable set TF_STATE_BUCKET$REPO_FLAG --body "$TF_STATE_BUCKET"
    (in alternativa via UI: Settings -> Secrets and variables -> Actions)
 
-2) Cancella la chiave dal disco quando hai finito:
+2) Cancella la chiave dal disco:
    rm "$KEY_FILE"
 
-3) Accendi la pipeline: da quel push in poi ogni 'production' deploya da solo.
+3) Accendi la pipeline (ogni push su 'production' deploya):
    git push origin main:production
 ===============================================================
 EOF
+  fi
 fi

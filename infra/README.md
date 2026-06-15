@@ -127,16 +127,18 @@ Configurare anche la pipeline CI/CD push-to-deploy? (true/false)
 ```
 
 With that, the deploy uses **remote state from the start** (so there's
-nothing to migrate later), and at the end it:
+nothing to migrate later), pre-creates the project with `gcloud` and runs
+Terraform with `create_project=false` (matching CI), and at the end it:
 
 - creates the GCS state bucket (if missing),
-- creates the `aivot-deployer` service account + a key,
-- removes the project from Terraform state (so CI never tries to destroy it),
-- prints the exact `gh` commands to set the GitHub secrets, and the
-  `git push origin main:production` that turns the pipeline on.
+- creates the `aivot-deployer` service account + key,
+- **sets the GitHub secrets/variables for you** when the
+  [`gh`](https://cli.github.com) CLI is authenticated (`gh auth login`),
+  detecting the repo from your clone's `git remote` — so it works on any
+  fork. If `gh` isn't logged in, it prints the exact commands instead.
 
-Follow those printed steps once and you're done. This is the clean path for
-a **new** project.
+Then just `git push origin main:production` to deploy. This is the clean
+path for a **new** project / a fork — no manual state surgery.
 
 ### Manual runbook (e.g. migrating a project you already deployed locally)
 

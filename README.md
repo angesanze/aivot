@@ -56,12 +56,40 @@ and admin URLs.
 > account — Google does not allow that to be fully unattended (cost
 > protection). Everything after that is automatic.
 
-**This button is a one-shot manual deploy** (Terraform state stays local in
-Cloud Shell). To redeploy, run `bash deploy.sh` again. For **push-to-deploy
-CI/CD** — every merge to the `production` branch deploys automatically, with
-shared remote state — follow the full runbook in
-[`infra/README.md`](infra/README.md), including how to migrate an existing
-button deploy onto the pipeline.
+By default the button is a **one-shot manual deploy** (Terraform state
+stays local in Cloud Shell). To redeploy, run `bash deploy.sh` again.
+
+### Want push-to-deploy CI/CD? Answer "yes" to one prompt
+
+When `deploy.sh` asks **"Configurare anche la pipeline CI/CD
+push-to-deploy?"**, answer `true`. It then:
+
+- keeps Terraform state in a shared GCS bucket (created automatically),
+- creates a deploy service account,
+- and — if the [`gh`](https://cli.github.com) CLI is logged in
+  (`gh auth login`) — **sets the GitHub secrets/variables on your repo for
+  you**, detecting the repo from your clone's `git remote`.
+
+After that, every push to the `production` branch deploys automatically:
+
+```bash
+git push origin main:production
+```
+
+### Fork & deploy (for your own copy)
+
+1. **Fork** this repo.
+2. In your fork's `README.md`, point the Cloud Shell button at your repo —
+   replace `angesanze/aivot` in the button URL above with `your-user/your-fork`
+   (or just open Cloud Shell on your fork and run `bash deploy.sh`).
+3. Click the button → `bash deploy.sh` → answer `true` to the pipeline
+   prompt. With `gh` logged in, the secrets are configured automatically;
+   otherwise the script prints the exact commands to run.
+4. `git push origin main:production` to deploy.
+
+The full runbook, the least-privilege role list, and how to migrate a
+pre-existing local-state deploy onto the pipeline are in
+[`infra/README.md`](infra/README.md).
 
 ## Configuration (optional)
 
