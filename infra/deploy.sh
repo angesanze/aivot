@@ -123,8 +123,9 @@ if [ -n "${TF_STATE_BUCKET:-}" ]; then
   if ! gcloud storage buckets describe "gs://$TF_STATE_BUCKET" >/dev/null 2>&1; then
     gcloud storage buckets create "gs://$TF_STATE_BUCKET" \
       --project "$PROJECT_ID" --location "$REGION"
-    gcloud storage buckets update "gs://$TF_STATE_BUCKET" --versioning
   fi
+  # Versioning best-effort (storia dello stato): se GCS fa i capricci, non bloccare.
+  gcloud storage buckets update "gs://$TF_STATE_BUCKET" --versioning 2>/dev/null || true
   printf 'terraform {\n  backend "gcs" {}\n}\n' > backend.tf
   TF_INIT_ARGS="-reconfigure -backend-config=bucket=$TF_STATE_BUCKET -backend-config=prefix=aivot/$PROJECT_ID"
 fi
