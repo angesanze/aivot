@@ -79,6 +79,24 @@ done
 #   gcloud auth application-default login
 unset GOOGLE_OAUTH_ACCESS_TOKEN
 
+# Modalità pipeline: il progetto NON viene gestito da Terraform (la CI gira
+# con create_project=false). Se va creato, lo facciamo QUI con gcloud — prima
+# di tutto — così esiste già quando creiamo il bucket di stato al suo interno
+# e quando Terraform ci lavora dentro. Niente uovo-e-gallina, niente state rm.
+if [ "${SETUP_PIPELINE:-false}" = "true" ] && [ "${CREATE_PROJECT:-true}" = "true" ]; then
+  if ! gcloud projects describe "$PROJECT_ID" >/dev/null 2>&1; then
+    say "Creo il progetto $PROJECT_ID (per la pipeline)"
+    # shellcheck disable=SC2086
+    gcloud projects create "$PROJECT_ID" ${ORG_ID:+--organization=$ORG_ID}
+    gcloud billing projects link "$PROJECT_ID" --billing-account="$BILLING_ACCOUNT"
+    # Servono subito: lo storage per il bucket di stato; il resto lo abilita
+    # Terraform.
+    gcloud services enable storage.googleapis.com cloudresourcemanager.googleapis.com \
+      --project "$PROJECT_ID"
+  fi
+  CREATE_PROJECT="false"
+fi
+
 TF_ARGS=(
   -var "project_id=$PROJECT_ID"
   -var "region=$REGION"
@@ -189,13 +207,6 @@ if [ "${SETUP_PIPELINE:-false}" = "true" ]; then
     --member "serviceAccount:$DEPLOYER" --role roles/owner --condition=None >/dev/null
   KEY_FILE="$HERE/aivot-deployer-key.json"
   gcloud iam service-accounts keys create "$KEY_FILE" --iam-account "$DEPLOYER"
-
-  # La CI gira con create_project=false: Terraform NON deve gestire il progetto,
-  # altrimenti la prima run proverebbe a distruggerlo. Lo togliamo dallo stato
-  # (il progetto resta su GCP, semplicemente non più gestito da Terraform).
-  if [ "${CREATE_PROJECT:-false}" = "true" ]; then
-    terraform state rm 'google_project.this[0]' 2>/dev/null || true
-  fi
 
   cat <<EOF
 
