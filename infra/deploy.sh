@@ -204,8 +204,16 @@ if [ "${SETUP_PIPELINE:-false}" = "true" ]; then
     gcloud iam service-accounts create aivot-deployer --project "$PROJECT_ID" \
       --display-name "AIVOT GitHub deployer"
   fi
-  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-    --member "serviceAccount:$DEPLOYER" --role roles/owner --condition=None >/dev/null
+  # Un SA appena creato può non essere ancora visibile a IAM: ritenta finché
+  # la propagazione non è completa (di solito pochi secondi).
+  for _ in 1 2 3 4 5 6; do
+    if gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+         --member "serviceAccount:$DEPLOYER" --role roles/owner \
+         --condition=None >/dev/null 2>&1; then
+      break
+    fi
+    sleep 5
+  done
   KEY_FILE="$HERE/aivot-deployer-key.json"
   gcloud iam service-accounts keys create "$KEY_FILE" --iam-account "$DEPLOYER"
 
