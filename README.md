@@ -6,6 +6,14 @@
 
 <p align="center"><b>Every constraint, a solution.</b></p>
 
+<p align="center">
+  <a href="https://aivot.rocks"><b>🚀 Live platform — aivot.rocks</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://angesanze.github.io/aivot/">📖 Documentation</a>
+  &nbsp;·&nbsp;
+  <a href="LICENSE">⚖️ GPL-3.0</a>
+</p>
+
 Constraint-based planning platform: describe people, shifts and rules —
 the CP-SAT engine (Google OR-Tools) computes the best possible schedule
 and, when none exists, explains *why* and *which* rules conflict. The
@@ -208,3 +216,15 @@ fallback). Next:
 2. Conditional rules ("if working Saturday, then Sunday off") in the
    custom rule builder
 3. Alternative email providers (generic SMTP)
+
+## Links
+
+- **Live platform**: https://aivot.rocks
+- **Documentation**: https://angesanze.github.io/aivot/
+- **Source**: https://github.com/angesanze/aivot
+
+## License
+
+AIVOT is free software released under the **GNU General Public License
+v3.0** — see [`LICENSE`](LICENSE). You're free to use, study, share and
+modify it; derivative works must remain under the GPL-3.0.
