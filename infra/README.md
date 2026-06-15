@@ -96,17 +96,138 @@ See [`variables.tf`](variables.tf). The most relevant:
 | `google_client_id` | `""` | enables Google sign-in |
 | `enable_firebase` | `true` | provision Firebase Hosting |
 
-## Continuous deploy (GitOps)
+## Two ways to deploy
 
-[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) redeploys
-to an **existing** project on every push to the `production` branch. It
-reuses `deploy.sh` with `CREATE_PROJECT=false` and a **remote Terraform
-state on GCS**, so state is shared across CI runs.
+| Mode | How | Terraform state | When |
+|------|-----|-----------------|------|
+| **Manual (one-shot)** | Cloud Shell button → `bash deploy.sh` | **local** (Cloud Shell home) | quick start, personal use |
+| **CI/CD (push-to-deploy)** | merge to `production` → GitHub Actions runs `deploy.sh` | **remote** (GCS bucket) | continuous deployment |
 
-First-time provisioning (which creates the project and the state bucket)
-is done once with the Cloud Shell button; the `production` branch then
-handles ongoing deploys. Required repo secrets/variables are listed at the
-top of the workflow file.
+The manual button does **not** set up any pipeline — it just deploys the
+current code once. To redeploy you re-run `bash deploy.sh`. The CI/CD
+pipeline below is opt-in and turns every push to `production` into a deploy.
+
+The single rule that keeps them compatible: **the Terraform state must be
+shared.** The manual flow keeps it locally; CI/CD keeps it in a GCS bucket.
+Mixing the two on one project only works if both point at the same state —
+hence the migration step below.
+
+## Continuous deployment (push-to-deploy) — full runbook
+
+`.github/workflows/deploy.yml` runs `deploy.sh` on every push to the
+`production` branch, with `CREATE_PROJECT=false` and Terraform state in a
+GCS bucket. Set it up **once**. All commands are idempotent and repeatable.
+
+Pick your values first (used throughout):
+
+```bash
+PROJECT=aviot-calculator          # your existing project id
+REGION=europe-west1
+BUCKET=$PROJECT-tfstate           # any globally-unique bucket name
+```
+
+### 1. Create the Terraform state bucket
+
+```bash
+gcloud storage buckets create gs://$BUCKET --project $PROJECT --location $REGION
+gcloud storage buckets update gs://$BUCKET --versioning   # keep state history
+```
+
+### 2. Create the deploy service account + key
+
+```bash
+gcloud iam service-accounts create aivot-deployer \
+  --project $PROJECT --display-name "AIVOT GitHub deployer"
+
+DEPLOYER=aivot-deployer@$PROJECT.iam.gserviceaccount.com
+
+# Simple on a personal project. For least privilege, grant the narrower set
+# instead (run.admin, cloudsql.admin, secretmanager.admin, cloudtasks.admin,
+# artifactregistry.admin, cloudbuild.builds.editor, firebasehosting.admin,
+# storage.admin, iam.serviceAccountAdmin, iam.serviceAccountUser,
+# resourcemanager.projectIamAdmin, serviceusage.serviceUsageAdmin).
+gcloud projects add-iam-policy-binding $PROJECT \
+  --member "serviceAccount:$DEPLOYER" --role roles/owner
+
+gcloud iam service-accounts keys create key.json --iam-account $DEPLOYER
+```
+
+### 3a. Already deployed with the button? Migrate the local state → bucket
+
+Do this **in the same `infra/` folder where you ran `deploy.sh`** (the one
+that holds your local `terraform.tfstate`):
+
+```bash
+git pull   # make sure you have the latest infra
+
+printf 'terraform {\n  backend "gcs" {}\n}\n' > backend.tf
+
+terraform init -migrate-state \
+  -backend-config="bucket=$BUCKET" \
+  -backend-config="prefix=aivot/$PROJECT"
+# answer "yes" to copy the existing state into the bucket
+```
+
+Then **stop Terraform from managing the project itself**, so the CI (which
+runs with `create_project=false`) won't try to destroy it. The project
+stays on GCP, just unmanaged:
+
+```bash
+terraform state rm 'google_project.this[0]'
+```
+
+> Why: `create_project` toggles a counted resource. The button used
+> `true` (project in state); CI uses `false` (no such resource). Without
+> this `state rm`, the first CI run would plan to **delete your project**.
+> Removing it from state makes both sides agree. Run `terraform plan` after
+> — it should show **no destroy of the project**.
+
+### 3b. Starting fresh (no button deploy yet)?
+
+Skip 3a. Pre-create the project (`gcloud projects create $PROJECT ...`,
+link billing), then the first `production` push provisions everything
+directly into the bucket. Nothing to migrate.
+
+### 4. Configure GitHub secrets & variables
+
+With the [`gh`](https://cli.github.com) CLI (or the repo UI under
+*Settings → Secrets and variables → Actions*):
+
+```bash
+gh secret   set GCP_CREDENTIALS  < key.json
+gh variable set GCP_PROJECT_ID   --body "$PROJECT"
+gh variable set GCP_REGION       --body "$REGION"
+gh variable set TF_STATE_BUCKET  --body "$BUCKET"
+# optional
+gh secret   set BREVO_API_KEY      --body "<brevo-key>"
+gh variable set BREVO_SENDER_EMAIL --body "<sender@domain>"
+gh variable set GOOGLE_CLIENT_ID   --body "<oauth-client-id>"
+
+rm key.json   # don't leave the key on disk
+```
+
+### 5. Turn it on
+
+`production` must contain the workflow, so point it at `main` and push:
+
+```bash
+git push origin main:production
+```
+
+That first push triggers a deploy. From now on, **every merge into
+`production` redeploys automatically**. Typical flow: open a PR → CI checks
+go green → merge to `main` → when ready to ship, fast-forward `production`:
+
+```bash
+git push origin main:production
+```
+
+### What the pipeline runs
+
+The same `deploy.sh` you'd run by hand, non-interactively: builds the
+backend image, runs the migration job, deploys Cloud Run, then builds and
+publishes the frontend to Firebase Hosting — all against the shared GCS
+state.
 
 ## Security notes
 

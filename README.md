@@ -40,14 +40,28 @@ solver jobs in the background:
 
 [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/angesanze/aivot&cloudshell_working_dir=infra&cloudshell_command=bash%20deploy.sh)
 
-The script asks for a project name and a billing account, then does the
-rest (Terraform + Cloud Build + Firebase). It takes ~10–15 minutes,
-mostly Cloud SQL provisioning. Full details, prerequisites and the
-GitOps `production`-branch pipeline are in [`infra/README.md`](infra/README.md).
+The button opens Google Cloud Shell with the repo cloned into `infra/`. If
+it doesn't start the script on its own, just run it:
+
+```bash
+bash deploy.sh
+```
+
+It asks for a project id and a billing account, then does the rest
+(Terraform + Cloud Build + migration job + Firebase). ~10–15 minutes,
+mostly Cloud SQL provisioning. At the end it prints the frontend, backend
+and admin URLs.
 
 > **Note**: creating a *new* project requires you to pick a billing
 > account — Google does not allow that to be fully unattended (cost
 > protection). Everything after that is automatic.
+
+**This button is a one-shot manual deploy** (Terraform state stays local in
+Cloud Shell). To redeploy, run `bash deploy.sh` again. For **push-to-deploy
+CI/CD** — every merge to the `production` branch deploys automatically, with
+shared remote state — follow the full runbook in
+[`infra/README.md`](infra/README.md), including how to migrate an existing
+button deploy onto the pipeline.
 
 ## Configuration (optional)
 

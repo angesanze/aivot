@@ -17,6 +17,9 @@ infra/.terraform/
 *.tfstate.*
 infra/*.tfvars
 !infra/*.tfvars.example
+# backend.tf lo genera deploy.sh quando si usa lo stato remoto (CI/CD):
+# non va versionato, altrimenti romperebbe il deploy locale a stato locale.
+infra/backend.tf
 
 # Sistema
 .DS_Store

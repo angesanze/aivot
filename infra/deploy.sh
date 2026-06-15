@@ -82,12 +82,23 @@ TF_ARGS=(
 
 cd "$HERE"
 
-say "1/5 · Terraform — creo l'infrastruttura (prima passata)"
-# TF_INIT_ARGS: la CI ci inietta il backend remoto (GCS). In locale è vuoto
-# e lo stato resta sul filesystem di Cloud Shell. Lo split in più flag è
-# voluto, quindi niente virgolette (shellcheck SC2086).
+# Stato Terraform: se TF_STATE_BUCKET è impostato, va su un bucket GCS
+# condiviso (indispensabile per la CI/CD: lo stesso stato fra CI e Cloud
+# Shell). Senza, resta in locale (uso col bottone "one-shot"). NB: la PRIMA
+# migrazione da stato locale a remoto si fa una volta a mano con
+# `terraform init -migrate-state` (vedi README) — qui si usa -reconfigure,
+# che presuppone lo stato già nel bucket.
+TF_INIT_ARGS=""
+if [ -n "${TF_STATE_BUCKET:-}" ]; then
+  say "Stato Terraform remoto: gs://$TF_STATE_BUCKET (prefix aivot/$PROJECT_ID)"
+  printf 'terraform {\n  backend "gcs" {}\n}\n' > backend.tf
+  TF_INIT_ARGS="-reconfigure -backend-config=bucket=$TF_STATE_BUCKET -backend-config=prefix=aivot/$PROJECT_ID"
+fi
+
+say "1/6 · Terraform — creo l'infrastruttura (prima passata)"
+# Lo split di TF_INIT_ARGS in più flag è voluto: niente virgolette (SC2086).
 # shellcheck disable=SC2086
-terraform init -input=false ${TF_INIT_ARGS:-}
+terraform init -input=false ${TF_INIT_ARGS}
 terraform apply -input=false -auto-approve "${TF_ARGS[@]}"
 
 AR_REPO="$(terraform output -raw artifact_repo)"

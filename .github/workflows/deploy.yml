@@ -43,12 +43,6 @@ jobs:
       - name: Installa la Firebase CLI
         run: npm install -g firebase-tools
 
-      - name: Configura il backend remoto di Terraform (GCS)
-        run: |
-          cat > infra/backend.tf <<'TF'
-          terraform { backend "gcs" {} }
-          TF
-
       - name: Deploy
         env:
           # deploy.sh gira non interattivo: tutto arriva dall'ambiente.
@@ -58,11 +52,8 @@ jobs:
           BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
           BREVO_SENDER_EMAIL: ${{ vars.BREVO_SENDER_EMAIL }}
           GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
-          # Stato Terraform su GCS, una cartella per progetto.
-          TF_INIT_ARGS: >-
-            -reconfigure
-            -backend-config=bucket=${{ vars.TF_STATE_BUCKET }}
-            -backend-config=prefix=aivot/${{ vars.GCP_PROJECT_ID }}
+          # Stato Terraform su GCS: deploy.sh scrive backend.tf e fa init.
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
           # La Firebase CLI e Terraform usano queste credenziali ADC.
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: bash infra/deploy.sh
