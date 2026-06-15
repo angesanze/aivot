@@ -330,6 +330,32 @@ docker compose up --build</pre>
       <a href="https://github.com/angesanze/aivot#configuration-optional">README</a>
       for the full reference.
     </div>
+
+    <h2 style="margin-top:52px">…or deploy to the cloud</h2>
+    <p class="lead">One button provisions the whole stack on Google Cloud —
+      Cloud SQL, Cloud Run for the Django backend, Firebase Hosting for the
+      frontend, and the Cloud Tasks queues that run emails and solver jobs in
+      the background.</p>
+    <p style="margin-top:18px">
+      <a href="https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/angesanze/aivot&amp;cloudshell_working_dir=infra&amp;cloudshell_command=bash%20deploy.sh">
+        <img src="https://gstatic.com/cloudssh/images/open-btn.svg" alt="Open in Cloud Shell" />
+      </a>
+    </p>
+    <p>It opens Google Cloud Shell; run <code>bash deploy.sh</code>, answer a
+      couple of prompts (project id, billing account) and it builds everything
+      in ~10–15 minutes, then prints the live URLs. Creating a new project
+      requires picking a billing account (Google's cost protection); the rest
+      is automatic.</p>
+    <p>Answer <strong>yes</strong> to the <em>CI/CD pipeline</em> prompt and it
+      also wires up <strong>push-to-deploy</strong>: state on a shared bucket,
+      a deploy service account, and your GitHub secrets set for you. After that
+      every push to the <code>production</code> branch redeploys automatically:</p>
+    <pre class="code">git push origin main:production</pre>
+    <div class="note">
+      Full deploy guide, fork instructions, least-privilege roles and the
+      CI/CD runbook:
+      <a href="https://github.com/angesanze/aivot/blob/main/infra/README.md">infra/README</a>.
+    </div>
   </div>
 </section>
 

@@ -200,9 +200,11 @@ npm install && npm run dev           # proxies /api -> :8000
 
 ## Roadmap
 
-1. Async solve (Cloud Tasks on GCP / a queue) — currently synchronous,
-   fine up to a few concurrent users
-2. Warm start: feed the last solution as a hint when re-planning
-3. Conditional rules ("if working Saturday, then Sunday off") in the
+Async solve and email **are done**: on the Google Cloud deploy they run on
+Cloud Tasks queues (locally they stay inline — same code, automatic
+fallback). Next:
+
+1. Warm start: feed the last solution as a hint when re-planning
+2. Conditional rules ("if working Saturday, then Sunday off") in the
    custom rule builder
-4. Alternative email providers (generic SMTP)
+3. Alternative email providers (generic SMTP)
