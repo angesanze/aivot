@@ -89,6 +89,15 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Firebase Hosting (CDN) davanti a Cloud Run inoltra al backend SOLO il cookie
+# chiamato "__session": ogni altro (sessionid, csrftoken) viene scartato.
+# Quindi la sessione dell'admin usa quel nome, e il token CSRF vive DENTRO la
+# sessione (niente cookie csrftoken separato): così l'unico cookie necessario
+# è "__session", che Firebase lascia passare, e il login admin regge via
+# dominio. Trasparente in locale e per l'API DRF (token auth, non sessione).
+SESSION_COOKIE_NAME = "__session"
+CSRF_USE_SESSIONS = True
+
 # Per l'admin dietro proxy/origini diverse
 CSRF_TRUSTED_ORIGINS = [
     o for o in {
