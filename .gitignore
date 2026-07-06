@@ -11,6 +11,10 @@ backend/staticfiles/
 node_modules/
 dist/
 
+# Astro (tipi generati) e cache della Firebase CLI
+.astro/
+.firebase/
+
 # Terraform (stato e cache locali; il lock file invece si versiona)
 infra/.terraform/
 *.tfstate

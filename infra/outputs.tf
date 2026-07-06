@@ -10,12 +10,22 @@ output "backend_url" {
 
 output "frontend_url" {
   value       = local.frontend_url
-  description = "URL del frontend su Firebase Hosting (vuoto se Firebase è disattivato)."
+  description = "URL pubblico dell'APP (app.<dominio> se c'è un dominio custom, altrimenti il sito Firebase dell'app). Vuoto se Firebase è disattivato."
+}
+
+output "marketing_url" {
+  value       = local.marketing_url
+  description = "URL pubblico della VETRINA marketing (l'apex <dominio> se c'è un dominio custom, altrimenti il suo sito Firebase)."
 }
 
 output "firebase_site_id" {
   value       = var.enable_firebase ? google_firebase_hosting_site.frontend[0].site_id : ""
-  description = "ID del sito Firebase Hosting su cui pubblicare il frontend."
+  description = "ID del sito Firebase Hosting dell'APP (frontend SPA su app.<dominio>)."
+}
+
+output "firebase_marketing_site_id" {
+  value       = var.enable_firebase ? google_firebase_hosting_site.marketing[0].site_id : ""
+  description = "ID del sito Firebase Hosting della VETRINA (marketing/dist sull'apex <dominio>)."
 }
 
 output "artifact_repo" {

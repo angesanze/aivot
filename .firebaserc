@@ -1,0 +1,11 @@
+{
+  "projects": { "default": "aivot-prod" },
+  "targets": {
+    "aivot-prod": {
+      "hosting": {
+        "app": ["aivot-prod"],
+        "www": ["aivot-prod-www"]
+      }
+    }
+  }
+}

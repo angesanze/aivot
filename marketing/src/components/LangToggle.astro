@@ -1,0 +1,29 @@
+---
+import { LOCALES, homeHref, LABEL } from "../lib/i18n";
+import type { Lang } from "../lib/i18n";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+---
+
+<div
+  class="flex items-center rounded-lg border border-white/10 bg-white/[0.03] p-0.5 text-xs font-medium"
+>
+  {
+    LOCALES.map((l) => (
+      <a
+        href={homeHref(l)}
+        aria-label={`Switch to ${LABEL[l]}`}
+        aria-current={l === lang ? "true" : undefined}
+        class:list={[
+          "rounded-md px-2 py-1 transition",
+          l === lang ? "bg-emerald-500/15 text-emerald-300" : "text-zinc-500 hover:text-zinc-200",
+        ]}
+      >
+        {LABEL[l]}
+      </a>
+    ))
+  }
+</div>

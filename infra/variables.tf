@@ -103,5 +103,5 @@ variable "enable_firebase" {
 variable "custom_domain" {
   type        = string
   default     = ""
-  description = "Dominio personalizzato (es. 'aivot.rocks'), senza schema. Diventa l'URL pubblico (link email, CSRF). Vuoto = si usa l'URL Firebase di default. Va comunque collegato a Firebase Hosting (DNS + console)."
+  description = "Dominio (apex) che possiedi, es. 'aivot.rocks', senza schema. L'apex serve la VETRINA marketing; l'APP vive su 'app.<apex>' (es. app.aivot.rocks) e diventa l'URL pubblico del backend (link email, CORS, CSRF). Vuoto = si usano gli URL Firebase di default. I due domini vanno comunque collegati ai rispettivi siti Firebase Hosting (DNS + console): apex → sito '<progetto>-www', app.<apex> → sito '<progetto>'."
 }

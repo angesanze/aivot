@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* Font: Inter for the UI, Prata for the wordmark, JetBrains Mono for code/mono
+   bits (all loaded via <link> in the Layout). */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Prata", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+  /* avoid the white flash before render: canvas = zinc-950 (the app's dark) */
+  background-color: #09090b;
+}
+
+::selection {
+  /* emerald tint — AIVOT's accent */
+  background-color: rgb(16 185 129 / 0.3);
+}
+
+/* the wordmark: Prata, spaced out like the app's landing */
+.wordmark {
+  font-family: var(--font-serif);
+  letter-spacing: 0.14em;
+}

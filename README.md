@@ -7,7 +7,9 @@
 <p align="center"><b>Every constraint, a solution.</b></p>
 
 <p align="center">
-  <a href="https://aivot.rocks"><b>🚀 Live platform — aivot.rocks</b></a>
+  <a href="https://app.aivot.rocks"><b>🚀 Live app — app.aivot.rocks</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://aivot.rocks">🌐 aivot.rocks</a>
   &nbsp;·&nbsp;
   <a href="https://angesanze.github.io/aivot/">📖 Documentation</a>
   &nbsp;·&nbsp;
@@ -43,8 +45,9 @@ password in production** (or set it via `.env` before first start).
 
 One button provisions the whole stack on a fresh (or existing) Google
 Cloud project — Cloud SQL, Cloud Run for the Django backend, Firebase
-Hosting for the frontend, and the Cloud Tasks queues that run emails and
-solver jobs in the background:
+Hosting for the app (`app.aivot.rocks`) and the marketing site
+(`aivot.rocks`), and the Cloud Tasks queues that run emails and solver
+jobs in the background:
 
 [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/angesanze/aivot&cloudshell_working_dir=infra&cloudshell_command=bash%20deploy.sh)
 
@@ -57,8 +60,8 @@ bash deploy.sh
 
 It asks for a project id and a billing account, then does the rest
 (Terraform + Cloud Build + migration job + Firebase). ~10–15 minutes,
-mostly Cloud SQL provisioning. At the end it prints the frontend, backend
-and admin URLs.
+mostly Cloud SQL provisioning. At the end it prints the app, marketing,
+backend and admin URLs.
 
 > **Note**: creating a *new* project requires you to pick a billing
 > account — Google does not allow that to be fully unattended (cost
@@ -132,7 +135,10 @@ environment.
 
 - **Backend**: Django 5 + DRF · OR-Tools CP-SAT solver · PostgreSQL 16
   (sqlite as automatic fallback without Docker)
-- **Frontend**: React 18 + Vite + Tailwind
+- **Frontend**: React 18 + Vite + Tailwind — the app, served on
+  `app.aivot.rocks`
+- **Marketing site**: Astro + Tailwind — the bilingual `aivot.rocks`
+  one-pager (in `marketing/`)
 
 ## What's inside
 
@@ -219,7 +225,8 @@ fallback). Next:
 
 ## Links
 
-- **Live platform**: https://aivot.rocks
+- **Live app**: https://app.aivot.rocks
+- **Marketing site**: https://aivot.rocks
 - **Documentation**: https://angesanze.github.io/aivot/
 - **Source**: https://github.com/angesanze/aivot
 

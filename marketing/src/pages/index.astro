@@ -1,0 +1,27 @@
+---
+// English homepage (default locale) → served at /
+import Layout from "../layouts/Layout.astro";
+import Nav from "../components/Nav.astro";
+import Hero from "../components/Hero.astro";
+import Steps from "../components/Steps.astro";
+import Capabilities from "../components/Capabilities.astro";
+import Solver from "../components/Solver.astro";
+import Offer from "../components/Offer.astro";
+import Changelog from "../components/Changelog.astro";
+import Footer from "../components/Footer.astro";
+
+const lang = "en" as const;
+---
+
+<Layout lang={lang}>
+  <Nav lang={lang} />
+  <main>
+    <Hero lang={lang} />
+    <Steps lang={lang} />
+    <Capabilities lang={lang} />
+    <Solver lang={lang} />
+    <Offer lang={lang} />
+    <Changelog lang={lang} />
+  </main>
+  <Footer lang={lang} />
+</Layout>

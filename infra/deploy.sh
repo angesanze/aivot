@@ -55,7 +55,7 @@ fi
 ask BREVO_API_KEY      "Chiave API Brevo (vuoto = email disattivate)" " "
 ask BREVO_SENDER_EMAIL "Mittente email validato su Brevo (vuoto = nessuno)" " "
 ask GOOGLE_CLIENT_ID   "Google OAuth Client ID (vuoto = login Google nascosto)" " "
-ask CUSTOM_DOMAIN      "Dominio personalizzato (es. aivot.rocks; vuoto = nessuno)" " "
+ask CUSTOM_DOMAIN      "Dominio apex che possiedi (es. aivot.rocks → vetrina; l'app va su app.aivot.rocks; vuoto = nessuno)" " "
 
 # Pipeline CI/CD (push-to-deploy): opzionale. Se sì, lo stato Terraform va
 # SUBITO su un bucket remoto (così non serve nessuna migrazione dopo) e a
@@ -161,6 +161,7 @@ terraform apply -input=false -auto-approve "${TF_ARGS[@]}" "${PASS1_ARGS[@]}"
 AR_REPO="$(terraform output -raw artifact_repo)"
 BACKEND_URL="$(terraform output -raw backend_url)"
 FIREBASE_SITE="$(terraform output -raw firebase_site_id || true)"
+MARKETING_SITE="$(terraform output -raw firebase_marketing_site_id || true)"
 IMAGE="$AR_REPO/backend:$(date +%Y%m%d-%H%M%S)"
 ok "Infra pronta. Backend (placeholder) su $BACKEND_URL"
 
@@ -184,39 +185,77 @@ terraform apply -input=false -auto-approve "${TF_ARGS[@]}" \
 ok "Backend live su $BACKEND_URL"
 
 if [ -n "$FIREBASE_SITE" ] && command -v firebase >/dev/null; then
-  say "5/6 · Frontend — build"
+  say "5/7 · App (frontend) — build"
   ( cd "$ROOT/frontend" && npm install --no-audit --no-fund && npm run build )
 
-  # Riscrive firebase.json con regione e servizio reali. /api, /admin e gli
-  # statici dell'admin (/static) vanno a Cloud Run (Django); tutto il resto
-  # alla SPA. Così <dominio>/admin apre il backoffice Django.
-  cat > "$ROOT/frontend/firebase.json" <<JSON
+  say "6/7 · Vetrina (marketing) — build"
+  ( cd "$ROOT/marketing" && npm install --no-audit --no-fund && npm run build )
+
+  # Riscrive la config Firebase con regione e siti reali. Due target di hosting:
+  #   app → sito "$FIREBASE_SITE"  : la SPA (frontend/dist) su app.<dominio>.
+  #         /api, /admin e /static vanno a Cloud Run (Django); il resto alla SPA,
+  #         così app.<dominio>/admin apre il backoffice Django.
+  #   www → sito "$MARKETING_SITE" : la vetrina statica (marketing/dist) sull'apex.
+  cat > "$ROOT/firebase.json" <<JSON
 {
-  "hosting": {
-    "site": "$FIREBASE_SITE",
-    "public": "dist",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "rewrites": [
-      { "source": "/api/**", "run": { "serviceId": "aivot-backend", "region": "$REGION" } },
-      { "source": "/admin/**", "run": { "serviceId": "aivot-backend", "region": "$REGION" } },
-      { "source": "/static/**", "run": { "serviceId": "aivot-backend", "region": "$REGION" } },
-      { "source": "**", "destination": "/index.html" }
-    ]
+  "hosting": [
+    {
+      "target": "app",
+      "public": "frontend/dist",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [
+        { "source": "/api/**", "run": { "serviceId": "aivot-backend", "region": "$REGION" } },
+        { "source": "/admin/**", "run": { "serviceId": "aivot-backend", "region": "$REGION" } },
+        { "source": "/static/**", "run": { "serviceId": "aivot-backend", "region": "$REGION" } },
+        { "source": "**", "destination": "/index.html" }
+      ]
+    },
+    {
+      "target": "www",
+      "public": "marketing/dist",
+      "cleanUrls": true,
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+    }
+  ]
+}
+JSON
+
+  # Mappa i target ai siti reali del progetto (fork-friendly: niente valori
+  # cablati). Sovrascrive .firebaserc con la mappatura risolta.
+  cat > "$ROOT/.firebaserc" <<JSON
+{
+  "projects": { "default": "$PROJECT_ID" },
+  "targets": {
+    "$PROJECT_ID": {
+      "hosting": {
+        "app": ["$FIREBASE_SITE"],
+        "www": ["$MARKETING_SITE"]
+      }
+    }
   }
 }
 JSON
 
-  say "6/6 · Firebase Hosting — pubblico il frontend"
-  ( cd "$ROOT/frontend" && firebase deploy --only hosting --project "$PROJECT_ID" --non-interactive )
-  FRONTEND_URL="https://$FIREBASE_SITE.web.app"
+  say "7/7 · Firebase Hosting — pubblico app e vetrina"
+  ( cd "$ROOT" && firebase deploy --only hosting --project "$PROJECT_ID" --non-interactive )
+
+  if [ -n "${CUSTOM_DOMAIN:-}" ]; then
+    APP_URL="https://app.$CUSTOM_DOMAIN"
+    MARKETING_URL="https://$CUSTOM_DOMAIN"
+  else
+    APP_URL="https://$FIREBASE_SITE.web.app"
+    MARKETING_URL="https://$MARKETING_SITE.web.app"
+  fi
 else
-  FRONTEND_URL="(Firebase non configurato: pubblica il frontend manualmente)"
+  APP_URL="(Firebase non configurato: pubblica app e vetrina manualmente)"
+  MARKETING_URL="$APP_URL"
 fi
 
 say "Fatto 🎉"
-echo "  Frontend : $FRONTEND_URL"
+echo "  App      : $APP_URL"
+echo "  Vetrina  : $MARKETING_URL"
 echo "  Backend  : $BACKEND_URL"
-echo "  Admin    : $BACKEND_URL/admin/  (utente: admin — cambia subito la password)"
+echo "  Admin    : $APP_URL/admin/  (utente: admin — cambia subito la password)"
 echo
 echo "Le code Cloud Tasks 'emails' e 'solver-runs' sono attive: email e calcoli"
 echo "girano in background. Buona pianificazione."

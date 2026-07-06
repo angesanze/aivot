@@ -1,0 +1,41 @@
+---
+import { stepsSection } from "../data/steps";
+import type { Lang } from "../lib/i18n";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const s = stepsSection[lang];
+---
+
+<section id="how" class="mx-auto max-w-6xl px-6 py-20 sm:py-24">
+  <div class="mx-auto max-w-2xl text-center">
+    <p class="text-sm font-semibold text-emerald-400">{s.eyebrow}</p>
+    <h2 class="mt-2 text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
+      {s.title}
+    </h2>
+    <p class="mt-4 text-zinc-400">{s.subtitle}</p>
+  </div>
+
+  <ol class="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    {
+      s.steps.map((step, i) => (
+        <li class="relative rounded-xl border border-white/[0.06] bg-zinc-900/50 p-5">
+          <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-sm font-bold text-emerald-400">
+            {step.n}
+          </span>
+          <h3 class="mt-4 font-semibold text-zinc-100">{step.name}</h3>
+          <p class="mt-1.5 text-sm leading-relaxed text-zinc-400">{step.desc}</p>
+          {i < s.steps.length - 1 && (
+            <span class="pointer-events-none absolute right-3 top-6 hidden text-zinc-700 lg:block">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </span>
+          )}
+        </li>
+      ))
+    }
+  </ol>
+</section>

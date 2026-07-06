@@ -1,0 +1,38 @@
+---
+import { site, links, copy } from "../data/site";
+import LangToggle from "./LangToggle.astro";
+import type { Lang } from "../lib/i18n";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const c = copy[lang];
+---
+
+<header class="sticky top-0 z-40 border-b border-white/[0.06] bg-zinc-950/80 backdrop-blur">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
+    <a href="#top" class="flex items-center gap-2.5">
+      <img src="/logo.svg" alt="AIVOT" width="30" height="30" class="rounded-lg" />
+      <span class="wordmark text-[15px] font-bold text-zinc-100">{site.name}</span>
+    </a>
+    <div class="hidden items-center gap-7 text-sm text-zinc-400 md:flex">
+      <a href="#how" class="transition hover:text-zinc-100">{c.nav.how}</a>
+      <a href="#features" class="transition hover:text-zinc-100">{c.nav.features}</a>
+      <a href="#solver" class="transition hover:text-zinc-100">{c.nav.solver}</a>
+      <a href={links.docs} class="transition hover:text-zinc-100">{c.nav.docs}</a>
+    </div>
+    <div class="flex items-center gap-3 text-sm">
+      <LangToggle lang={lang} />
+      <a href={links.app} class="hidden text-zinc-400 transition hover:text-zinc-100 sm:inline">
+        {c.cta.login}
+      </a>
+      <a
+        href={links.app}
+        class="rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white shadow-[0_0_20px_-5px_rgb(16_185_129/0.6)] transition hover:bg-emerald-500"
+      >
+        {c.cta.try}
+      </a>
+    </div>
+  </nav>
+</header>

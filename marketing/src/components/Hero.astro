@@ -1,0 +1,69 @@
+---
+import { links, copy } from "../data/site";
+import ScheduleMockup from "./ScheduleMockup.astro";
+import type { Lang } from "../lib/i18n";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const c = copy[lang];
+---
+
+<section id="top" class="relative mx-auto max-w-6xl px-6 pt-16 pb-8 sm:pt-24">
+  <div
+    class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(ellipse_55%_60%_at_50%_0%,rgb(16_185_129/0.18),transparent)]"
+  >
+  </div>
+
+  <div class="mx-auto max-w-3xl text-center">
+    <a
+      href={links.github}
+      class="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1.5 text-xs font-medium text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
+    >
+      <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+      {c.heroBadge}
+    </a>
+    <h1 class="text-balance text-4xl font-bold tracking-tight text-zinc-50 sm:text-6xl">
+      {c.tagline}
+    </h1>
+    <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">
+      {c.description}
+    </p>
+    <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+      <a
+        href={links.app}
+        class="rounded-lg bg-emerald-600 px-6 py-3 font-medium text-white shadow-[0_0_30px_-6px_rgb(16_185_129/0.65)] transition hover:bg-emerald-500"
+      >
+        {c.cta.try}
+      </a>
+      <a
+        href={links.docs}
+        class="rounded-lg border border-white/10 bg-white/[0.02] px-6 py-3 font-medium text-zinc-200 transition hover:bg-white/[0.05]"
+      >
+        {c.cta.docs}
+      </a>
+    </div>
+  </div>
+
+  <div class="relative mx-auto mt-16 max-w-5xl">
+    <div
+      class="pointer-events-none absolute -inset-x-8 -top-8 bottom-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgb(13_148_136/0.16),transparent)]"
+    >
+    </div>
+    <ScheduleMockup lang={lang} />
+  </div>
+
+  <dl
+    class="mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.06] sm:grid-cols-4"
+  >
+    {
+      c.stats.map((s) => (
+        <div class="bg-zinc-950 px-4 py-5 text-center">
+          <dt class="text-2xl font-bold text-zinc-50">{s.value}</dt>
+          <dd class="mt-1 text-xs text-zinc-500">{s.label}</dd>
+        </div>
+      ))
+    }
+  </dl>
+</section>

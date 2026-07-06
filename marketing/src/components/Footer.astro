@@ -1,0 +1,33 @@
+---
+import { site, links, copy } from "../data/site";
+import type { Lang } from "../lib/i18n";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const c = copy[lang];
+const year = new Date().getFullYear();
+---
+
+<footer class="border-t border-white/[0.06]">
+  <div class="mx-auto max-w-6xl px-6 py-12">
+    <div class="flex flex-col items-center justify-between gap-6 sm:flex-row">
+      <div class="flex items-center gap-2.5">
+        <img src="/logo.svg" alt="" width="26" height="26" class="rounded-md" />
+        <span class="wordmark font-semibold text-zinc-200">{site.name}</span>
+        <span class="text-sm text-zinc-600">© {year}</span>
+      </div>
+      <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-zinc-500">
+        <a href={links.docs} class="transition hover:text-zinc-200">{c.nav.docs}</a>
+        <a href={links.github} class="transition hover:text-zinc-200">GitHub</a>
+        <a href={links.app} class="transition hover:text-zinc-200">{c.cta.open}</a>
+        <a href={`mailto:${links.email}`} class="transition hover:text-zinc-200">{c.footer.contact}</a>
+      </div>
+    </div>
+    <div class="mt-6 flex flex-col items-center justify-between gap-2 border-t border-white/[0.04] pt-6 text-xs text-zinc-600 sm:flex-row">
+      <span>{c.footer.tagline}</span>
+      <span>{c.footer.rights}</span>
+    </div>
+  </div>
+</footer>

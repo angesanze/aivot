@@ -18,17 +18,25 @@ locals {
   # anche il service account che firma i token OIDC verso i worker.
   runtime_sa = "aivot-run@${local.project_id}.iam.gserviceaccount.com"
 
-  # URL Firebase di default (sito = project_id).
-  firebase_url = var.enable_firebase ? "https://${local.project_id}.web.app" : ""
+  # URL Firebase di default dei due siti di hosting: l'APP (sito = project_id)
+  # e il sito MARKETING (sito = project_id-www).
+  firebase_url           = var.enable_firebase ? "https://${local.project_id}.web.app" : ""
+  marketing_firebase_url = var.enable_firebase ? "https://${local.project_id}-www.web.app" : ""
 
-  # URL pubblico del frontend: il dominio custom se impostato (es.
-  # https://aivot.rocks), altrimenti il sito Firebase. Finisce in FRONTEND_URL
-  # del backend → link nelle email + CSRF_TRUSTED_ORIGINS, così il login
-  # dell'admin via dominio custom funziona.
-  frontend_url = var.custom_domain != "" ? "https://${var.custom_domain}" : local.firebase_url
+  # Il dominio custom è l'apex che possiedi (es. aivot.rocks): serve il sito
+  # MARKETING. L'APP (il gestionale) vive sul sottodominio app.<apex>
+  # (es. app.aivot.rocks). Così: aivot.rocks = vetrina, app.aivot.rocks = app.
+  app_domain    = var.custom_domain != "" ? "app.${var.custom_domain}" : ""
+  marketing_url = var.custom_domain != "" ? "https://${var.custom_domain}" : local.marketing_firebase_url
 
-  # Con un dominio custom, l'URL Firebase resta comunque fidato per il CSRF:
-  # così l'admin è usabile su entrambi durante la transizione del dominio.
+  # URL pubblico dell'APP: il sottodominio app.<apex> se c'è un dominio custom,
+  # altrimenti il sito Firebase dell'app. Finisce in FRONTEND_URL del backend →
+  # link nelle email + CORS + CSRF_TRUSTED_ORIGINS, così login/API e admin
+  # reggono sul dominio giusto (l'app, non la vetrina).
+  frontend_url = local.app_domain != "" ? "https://${local.app_domain}" : local.firebase_url
+
+  # Con un dominio custom, l'URL Firebase dell'app resta comunque fidato per il
+  # CSRF: così l'admin è usabile su entrambi durante la transizione del dominio.
   extra_csrf_origins = var.custom_domain != "" ? local.firebase_url : ""
 }
 
@@ -504,6 +512,21 @@ resource "google_firebase_hosting_site" "frontend" {
   provider = google-beta
   project  = local.project_id
   site_id  = local.project_id
+
+  depends_on = [google_firebase_project.this]
+}
+
+# Secondo sito di hosting: la VETRINA (marketing) su aivot.rocks. L'app sta sul
+# sito sopra (project_id → app.aivot.rocks); questo serve l'apex. Site id
+# "<progetto>-www" (globalmente univoco). Il contenuto (Astro statico in
+# marketing/dist) lo carica deploy.sh con la Firebase CLI.
+# NB: un site id Firebase è al massimo 30 caratteri: con un project_id molto
+# lungo (>26) accorcialo o scegli un site_id fisso qui.
+resource "google_firebase_hosting_site" "marketing" {
+  count    = var.enable_firebase ? 1 : 0
+  provider = google-beta
+  project  = local.project_id
+  site_id  = "${local.project_id}-www"
 
   depends_on = [google_firebase_project.this]
 }
